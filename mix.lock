@@ -1,0 +1,6 @@
+%{
+  "ex_json_schema": {:hex, :ex_json_schema, "0.7.4", "09eb5b0c8184e5702bc89625a9d0c05c7a0a845d382e9f6f406a0fc1c9a8cc3f", [:mix], [], "hexpm", "45c67fa840f0d719a2b5578126dc29bcdc1f92499c0f61bcb8a3bcb5935f9684"},
+  "faker": {:hex, :faker, "0.16.0", "1e2cf3e8d60d44a30741fb98118fcac18b2020379c7e00d18f1a005841b2f647", [:mix], [], "hexpm", "fbcb9bf1299dff3c9dd7e50f41802bbc472ffbb84e7656394c8aa913ec315141"},
+  "randex": {:hex, :randex, "0.4.0", "f76712da3663dd7d4166e017829ec428dc67df9e11b82d923dfd6f9b4854b373", [:mix], [{:stream_data, "~> 0.4", [hex: :stream_data, repo: "hexpm", optional: true]}], "hexpm", "f803f256542bd264acea832a69f6e5fea3df4cd3f8a9f03588e5593f04c61095"},
+  "uuid": {:hex, :uuid, "1.1.8", "e22fc04499de0de3ed1116b770c7737779f226ceefa0badb3592e64d5cfb4eb9", [:mix], [], "hexpm", "c790593b4c3b601f5dc2378baae7efaf5b3d73c4c6456ba85759905be792f2ac"},
+}
