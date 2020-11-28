@@ -87,4 +87,14 @@ defmodule JsonDataFakerTest do
     s = JsonDataFaker.generate(schema)
     assert Validator.valid?(Schema.resolve(schema), s)
   end
+
+  test "empty or invalid schema should return nil" do
+    schema = %{}
+    assert is_nil(JsonDataFaker.generate(schema))
+    schema = nil
+    assert is_nil(JsonDataFaker.generate(schema))
+
+    schema = []
+    assert is_nil(JsonDataFaker.generate(schema))
+  end
 end

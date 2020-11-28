@@ -26,7 +26,12 @@ defmodule JsonDataFaker do
 
   def generate(schema) when is_map(schema) do
     generate(Schema.resolve(schema))
+  rescue
+    _ ->
+      nil
   end
+
+  def generate(_schema), do: nil
 
   # private functions
   defp generate_by_type(%{"type" => "boolean"}) do
@@ -57,6 +62,8 @@ defmodule JsonDataFaker do
       Map.put(acc, k, generate_by_type(inner_schema))
     end)
   end
+
+  defp generate_by_type(_schema), do: nil
 
   defp generate_string(%{"format" => "date-time"}),
     do: DateTime.utc_now() |> DateTime.to_iso8601()
