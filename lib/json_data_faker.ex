@@ -50,7 +50,7 @@ defmodule JsonDataFaker do
 
   defp generate_by_type(%{"type" => "array"} = schema) do
     inner_schema = schema["items"]
-    count = Enum.random(5..20)
+    count = Enum.random(2..5)
 
     Enum.map(1..count, fn _ ->
       generate_by_type(inner_schema)
@@ -75,6 +75,9 @@ defmodule JsonDataFaker do
   defp generate_string(%{"format" => "ipv6"}), do: Faker.Internet.ip_v6_address()
   defp generate_string(%{"format" => "uri"}), do: Faker.Internet.url()
 
+  defp generate_string(%{"format" => "image_uri"}),
+    do: "https://source.unsplash.com/random/400x400"
+
   defp generate_string(%{"enum" => choices}), do: Enum.random(choices)
 
   defp generate_string(%{"pattern" => regex}),
@@ -83,11 +86,11 @@ defmodule JsonDataFaker do
   defp generate_string(schema) do
     min = schema["minLength"] || 0
     max = schema["maxLength"] || 1024
-    s = Faker.Lorem.Shakespeare.hamlet()
+    s = Faker.Lorem.word()
 
     case String.length(s) do
       v when v > max -> String.slice(s, 0, max - 1)
-      v when v < min -> s <> " " <> List.to_string(Faker.Lorem.characters(min - v))
+      v when v < min -> String.slice(Faker.Lorem.sentence(min), 0, min)
       _ -> s
     end
   end
