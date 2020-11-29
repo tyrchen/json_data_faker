@@ -41,7 +41,8 @@ defmodule JsonDataFaker.MixProject do
       {:uuid, "~> 1.1"},
 
       # dev/test deps
-      {:ex_doc, "~> 0.23", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.23", only: :dev, runtime: false},
+      {:credo, "~> 1.5", only: [:dev, :test]}
     ]
   end
 
