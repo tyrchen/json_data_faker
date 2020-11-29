@@ -13,6 +13,7 @@ defmodule JsonDataFaker.MixProject do
       # Docs
       name: "JsonDataFaker",
       docs: [
+        main: "JsonDataFaker",
         extras: ["README.md"]
       ],
       source_url: "https://github.com/tyrchen/json_data_faker",
@@ -43,7 +44,7 @@ defmodule JsonDataFaker.MixProject do
 
   defp package do
     [
-      files: ["lib", "mix.exs", "README*", "../LICENSE*"],
+      files: ["lib", "mix.exs", "README*", "LICENSE*"],
       licenses: ["MIT"],
       maintainers: ["tyr.chen@gmail.com"],
       links: %{
