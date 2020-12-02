@@ -41,7 +41,7 @@ iex> schema = %{
   "type" => "array"
 }
 
-iex> JsonDataFaker.generate(schema)
+iex> schema |> JsonDataFaker.generate() |> Enum.take(1) |> List.first()
 [
   %{
     "body" => "Do you think I am easier to be played on than a pipe?",
@@ -66,7 +66,7 @@ iex> JsonDataFaker.generate(schema)
 ```elixir
 def deps do
   [
-    {:json_data_faker, "~> 0.1.0"}
+    {:json_data_faker, "~> 0.2.0"}
   ]
 end
 ```
