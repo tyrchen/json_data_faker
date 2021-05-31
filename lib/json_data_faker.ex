@@ -21,41 +21,44 @@ defmodule JsonDataFaker do
       ...>}
       iex> %{"title" => _title} = JsonDataFaker.generate(schema) |> Enum.take(1) |> List.first()
   """
-  def generate(%Schema.Root{} = schema) do
-    generate_by_type(schema.schema, schema)
+  def generate(schema, opts \\ [])
+
+  def generate(%Schema.Root{} = schema, opts) do
+    generate_by_type(schema.schema, schema, opts)
   end
 
-  def generate(schema) when is_map(schema) do
-    generate(Schema.resolve(schema))
+  def generate(schema, opts) when is_map(schema) do
+    schema
+    |> Schema.resolve()
+    |> generate(opts)
   rescue
     e ->
       Logger.error("Failed to generate data. #{inspect(e)}")
       nil
   end
 
-  def generate(_schema), do: nil
+  def generate(_schema, _opts), do: nil
 
   # private functions
-  defp generate_by_type(%{"$ref" => ref}, root) do
-    case ExJsonSchema.Schema.get_fragment(root, ref) do
-      {:ok, resolved} -> generate_by_type(resolved, root)
-      _ -> nil
-    end
+  defp generate_by_type(%{"$ref" => _} = schema, root, opts) do
+    schema
+    |> resolve(root)
+    |> generate_by_type(root, opts)
   end
 
-  defp generate_by_type(%{"oneOf" => oneOf}, root),
-    do: oneOf |> Enum.map(&generate_by_type(&1, root)) |> StreamData.one_of()
+  defp generate_by_type(%{"oneOf" => oneOf}, root, opts),
+    do: oneOf |> Enum.map(&generate_by_type(&1, root, opts)) |> StreamData.one_of()
 
-  defp generate_by_type(%{"anyOf" => anyOf}, root),
-    do: anyOf |> Enum.map(&generate_by_type(&1, root)) |> StreamData.one_of()
+  defp generate_by_type(%{"anyOf" => anyOf}, root, opts),
+    do: anyOf |> Enum.map(&generate_by_type(&1, root, opts)) |> StreamData.one_of()
 
-  defp generate_by_type(%{"enum" => choices}, _root), do: StreamData.member_of(choices)
+  defp generate_by_type(%{"enum" => choices}, _root, _opts), do: StreamData.member_of(choices)
 
-  defp generate_by_type(%{"type" => "boolean"}, _root), do: boolean()
+  defp generate_by_type(%{"type" => "boolean"}, _root, _opts), do: boolean()
 
-  defp generate_by_type(%{"type" => "string"} = schema, _root), do: generate_string(schema)
+  defp generate_by_type(%{"type" => "string"} = schema, _root, _opts), do: generate_string(schema)
 
-  defp generate_by_type(%{"type" => "integer"} = schema, _root) do
+  defp generate_by_type(%{"type" => "integer"} = schema, _root, _opts) do
     generate_integer(
       schema["minimum"],
       schema["maximum"],
@@ -65,7 +68,7 @@ defmodule JsonDataFaker do
     )
   end
 
-  defp generate_by_type(%{"type" => "array"} = schema, root) do
+  defp generate_by_type(%{"type" => "array"} = schema, root, _opts) do
     inner_schema = schema["items"]
 
     opts =
@@ -77,11 +80,11 @@ defmodule JsonDataFaker do
 
     case Map.get(schema, "uniqueItems", false) do
       false ->
-        StreamData.list_of(generate_by_type(inner_schema, root), opts)
+        StreamData.list_of(generate_by_type(inner_schema, root, opts), opts)
 
       true ->
         inner_schema
-        |> generate_by_type(root)
+        |> generate_by_type(root, opts)
         |> StreamData.scale(fn size ->
           case Keyword.get(opts, :max_length, false) do
             false -> size
@@ -92,13 +95,30 @@ defmodule JsonDataFaker do
     end
   end
 
-  defp generate_by_type(%{"type" => "object", "properties" => properties} = schema, root) do
+  defp generate_by_type(%{"type" => "object", "properties" => _} = schema, root, opts) do
+    case Keyword.get(opts, :require_optional_properties, false) do
+      true -> generate_full_object(schema, root, opts)
+      false -> generate_object(schema, root, opts)
+    end
+  end
+
+  defp generate_by_type(_schema, _root, _opts), do: StreamData.constant(nil)
+
+  defp generate_full_object(%{"properties" => properties}, root, opts) do
+    properties
+    |> Map.new(fn {key, inner_schema} -> {key, generate_by_type(inner_schema, root, opts)} end)
+    |> StreamData.fixed_map()
+  end
+
+  defp generate_object(%{"properties" => properties} = schema, root, opts) do
     required = Map.get(schema, "required", [])
     {required_props, optional_props} = Enum.split_with(properties, &(elem(&1, 0) in required))
 
     [required_map, optional_map] =
       Enum.map([required_props, optional_props], fn props ->
-        Map.new(props, fn {key, inner_schema} -> {key, generate_by_type(inner_schema, root)} end)
+        Map.new(props, fn {key, inner_schema} ->
+          {key, generate_by_type(inner_schema, root, opts)}
+        end)
       end)
 
     required_map
@@ -109,8 +129,6 @@ defmodule JsonDataFaker do
       end)
     end)
   end
-
-  defp generate_by_type(_schema, _root), do: StreamData.constant(nil)
 
   defp generate_string(%{"format" => "date-time"}),
     do: stream_gen(fn -> 30 |> Faker.DateTime.backward() |> DateTime.to_iso8601() end)
@@ -186,4 +204,7 @@ defmodule JsonDataFaker do
   defp stream_gen(fun) do
     StreamData.map(StreamData.constant(nil), fn _ -> fun.() end)
   end
+
+  defp resolve(%{"$ref" => ref}, root), do: ExJsonSchema.Schema.get_fragment!(root, ref)
+  defp resolve(schema, _root), do: schema
 end

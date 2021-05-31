@@ -189,6 +189,15 @@ defmodule JsonDataFakerTest do
 
   property_test("complex object generation should work", @full_object)
 
+  property "require_optional_properties property should work" do
+    resolved_schema = ExJsonSchema.Schema.resolve(@full_object)
+
+    check all(data <- JsonDataFaker.generate(@full_object, require_optional_properties: true)) do
+      assert ExJsonSchema.Validator.valid?(resolved_schema, data)
+      assert Map.has_key?(data, "status")
+    end
+  end
+
   property_test("array of object generation should work", %{
     "items" => @complex_object,
     "type" => "array",
