@@ -43,6 +43,12 @@ defmodule JsonDataFaker do
     end
   end
 
+  defp generate_by_type(%{"oneOf" => oneOf}, root),
+    do: oneOf |> Enum.map(&generate_by_type(&1, root)) |> StreamData.one_of()
+
+  defp generate_by_type(%{"anyOf" => anyOf}, root),
+    do: anyOf |> Enum.map(&generate_by_type(&1, root)) |> StreamData.one_of()
+
   defp generate_by_type(%{"enum" => choices}, _root), do: StreamData.member_of(choices)
 
   defp generate_by_type(%{"type" => "boolean"}, _root), do: boolean()

@@ -221,6 +221,16 @@ defmodule JsonDataFakerTest do
     "uniqueItems" => true
   })
 
+  property_test("oneOf generation should work", [
+    %{"oneOf" => [%{"type" => "integer"}, %{"type" => "boolean"}]},
+    %{"oneOf" => [%{"type" => "integer"}, @complex_object], "components" => @components}
+  ])
+
+  property_test("anyOf generation should work", [
+    %{"anyOf" => [%{"type" => "integer"}, %{"type" => "boolean"}]},
+    %{"anyOf" => [%{"type" => "integer"}, @complex_object], "components" => @components}
+  ])
+
   property "empty or invalid schema should return nil" do
     schema = %{}
 
