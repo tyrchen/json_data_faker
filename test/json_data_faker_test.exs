@@ -178,6 +178,35 @@ defmodule JsonDataFakerTest do
     }
   )
 
+  property_test("float generation should work", %{
+    "type" => "number",
+    "minimum" => 5.24,
+    "maximum" => 20.33
+  })
+
+  property_test("float generation with exclusive endpoints should work", %{
+    "type" => "number",
+    "minimum" => 3.0,
+    "maximum" => 7.789,
+    "exclusiveMinimum" => true,
+    "exclusiveMaximum" => true
+  })
+
+  property_test("float generation with exclusive and negative endpoints should work", %{
+    "type" => "number",
+    "minimum" => -7.245,
+    "maximum" => -3.0,
+    "exclusiveMinimum" => true,
+    "exclusiveMaximum" => true
+  })
+
+  property_test("float generation with multipleOf and negative endpoints should work", %{
+    "type" => "number",
+    "minimum" => -7.245,
+    "maximum" => -3.0,
+    "multipleOf" => 2
+  })
+
   property_test("object generation without required properties should work", %{
     "type" => "object",
     "properties" => %{
