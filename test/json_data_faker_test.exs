@@ -251,6 +251,28 @@ defmodule JsonDataFakerTest do
     "uniqueItems" => true
   })
 
+  property_test("array generation with additionalItems bool and array of items should work", [
+    %{
+      "items" => [%{"type" => "integer"}, %{"type" => "string"}],
+      "type" => "array",
+      "additionalItems" => false
+    },
+    %{
+      "items" => [%{"type" => "integer"}, %{"type" => "string"}],
+      "type" => "array",
+      "additionalItems" => true
+    }
+  ])
+
+  property_test(
+    "array generation with additionalItems as schema and array of items should work",
+    %{
+      "type" => "array",
+      "items" => [%{"type" => "integer"}, %{"type" => "string"}],
+      "additionalItems" => %{"type" => "object"}
+    }
+  )
+
   property_test("array generation with all options should work", %{
     "items" => %{"type" => "integer"},
     "type" => "array",

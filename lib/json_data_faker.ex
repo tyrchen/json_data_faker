@@ -43,10 +43,10 @@ defmodule JsonDataFaker do
   rescue
     e ->
       Logger.error("Failed to generate data. #{inspect(e)}")
-      nil
+      StreamData.constant(nil)
   end
 
-  def generate(_schema, _opts), do: nil
+  def generate(_schema, _opts), do: StreamData.constant(nil)
 
   # private functions
   defp generate_by_type(%{"$ref" => _} = schema, root, opts) do
@@ -121,9 +121,37 @@ defmodule JsonDataFaker do
     StreamData.one_of([int_generator, float_generator])
   end
 
-  defp generate_by_type(%{"type" => "array"} = schema, root, _opts) do
-    inner_schema = schema["items"]
+  defp generate_by_type(
+         %{"type" => "array", "additionalItems" => ai, "items" => [_ | _] = items},
+         root,
+         opts
+       )
+       when is_boolean(ai) do
+    items
+    |> Enum.map(&generate_by_type(&1, root, opts))
+    |> StreamData.fixed_list()
+  end
 
+  defp generate_by_type(
+         %{"type" => "array", "additionalItems" => schema, "items" => [_ | _] = items},
+         root,
+         opts
+       )
+       when is_map(schema) do
+    items
+    |> Enum.map(&generate_by_type(&1, root, opts))
+    |> StreamData.fixed_list()
+    |> StreamData.bind(fn fixed_list ->
+      additional_generator = StreamData.list_of(generate_by_type(schema, root, opts))
+
+      StreamData.bind(additional_generator, fn additional ->
+        StreamData.constant(Enum.concat(fixed_list, additional))
+      end)
+    end)
+  end
+
+  defp generate_by_type(%{"type" => "array", "items" => inner_schema} = schema, root, _opts)
+       when is_map(inner_schema) do
     opts =
       Enum.reduce(schema, [], fn
         {"minItems", min}, acc -> Keyword.put(acc, :min_length, min)
