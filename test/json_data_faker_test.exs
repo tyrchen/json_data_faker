@@ -166,6 +166,15 @@ defmodule JsonDataFakerTest do
     }
   )
 
+  property_test("object generation without required properties should work", %{
+    "type" => "object",
+    "properties" => %{
+      "foo" => %{
+        "type" => "integer"
+      }
+    }
+  })
+
   property_test("complex object generation should work", @complex_object)
 
   property_test("array of object generation should work", %{

@@ -19,7 +19,7 @@ defmodule JsonDataFaker do
       ...>  "required" => ["title"],
       ...>  "type" => "object"
       ...>}
-      iex> %{"title" => _title, "body" => _body} = JsonDataFaker.generate(schema) |> Enum.take(1) |> List.first()
+      iex> %{"title" => _title} = JsonDataFaker.generate(schema) |> Enum.take(1) |> List.first()
   """
   def generate(%Schema.Root{} = schema) do
     generate_by_type(schema.schema)
@@ -79,12 +79,20 @@ defmodule JsonDataFaker do
     end
   end
 
-  defp generate_by_type(%{"type" => "object"} = schema) do
-    stream_gen(fn ->
-      Enum.reduce(schema["properties"], %{}, fn {k, inner_schema}, acc ->
-        v = inner_schema |> generate_by_type() |> Enum.take(1) |> List.first()
+  defp generate_by_type(%{"type" => "object", "properties" => properties} = schema) do
+    required = Map.get(schema, "required", [])
+    {required_props, optional_props} = Enum.split_with(properties, &(elem(&1, 0) in required))
 
-        Map.put(acc, k, v)
+    [required_map, optional_map] =
+      Enum.map([required_props, optional_props], fn props ->
+        Map.new(props, fn {key, inner_schema} -> {key, generate_by_type(inner_schema)} end)
+      end)
+
+    required_map
+    |> StreamData.fixed_map()
+    |> StreamData.bind(fn req_map ->
+      StreamData.bind(StreamData.optional_map(optional_map), fn opt_map ->
+        StreamData.constant(Map.merge(opt_map, req_map))
       end)
     end)
   end
