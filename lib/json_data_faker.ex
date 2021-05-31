@@ -176,12 +176,16 @@ defmodule JsonDataFaker do
     end
   end
 
+  defp generate_by_type(%{"type" => "array"}, _root, _opts), do: StreamData.constant([])
+
   defp generate_by_type(%{"type" => "object", "properties" => _} = schema, root, opts) do
     case Keyword.get(opts, :require_optional_properties, false) do
       true -> generate_full_object(schema, root, opts)
       false -> generate_object(schema, root, opts)
     end
   end
+
+  defp generate_by_type(%{"type" => "object"}, _root, _opts), do: StreamData.constant(%{})
 
   defp generate_by_type(_schema, _root, _opts), do: StreamData.constant(nil)
 

@@ -281,6 +281,11 @@ defmodule JsonDataFakerTest do
     "uniqueItems" => true
   })
 
+  property_test("empty objects and arrays generation should work", [
+    %{"type" => "object"},
+    %{"type" => "array"}
+  ])
+
   property_test("oneOf generation should work", [
     %{"oneOf" => [%{"type" => "integer"}, %{"type" => "boolean"}]},
     %{"oneOf" => [%{"type" => "integer"}, @complex_object], "components" => @components}
