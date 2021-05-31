@@ -1,8 +1,22 @@
+defmodule JsonDataFakerTest.Helpers do
+  defmacro property_test(name, schema) do
+    quote do
+      property unquote(name) do
+        resolved_schema = ExJsonSchema.Schema.resolve(unquote(schema))
+
+        check all(data <- JsonDataFaker.generate(unquote(schema))) do
+          assert ExJsonSchema.Validator.valid?(resolved_schema, data)
+        end
+      end
+    end
+  end
+end
+
 defmodule JsonDataFakerTest do
   use ExUnit.Case
   use ExUnitProperties
+  import JsonDataFakerTest.Helpers
 
-  alias ExJsonSchema.{Validator, Schema}
   doctest JsonDataFaker
 
   @complex_object %{
@@ -47,72 +61,41 @@ defmodule JsonDataFakerTest do
   end
 
   Enum.each(["date-time", "email", "hostname", "ipv4", "ipv6", "uri"], fn format ->
-    property "string #{format} generation should work" do
-      schema = %{"type" => "string", "format" => unquote(format)}
-      resolved_schema = Schema.resolve(schema)
-
-      check all(data <- JsonDataFaker.generate(schema)) do
-        assert Validator.valid?(resolved_schema, data)
-      end
-    end
+    property_test("string #{format} generation should work", %{
+      "type" => "string",
+      "format" => unquote(format)
+    })
   end)
 
-  property "string regex generation should work" do
-    schema = %{"type" => "string", "pattern" => "^(\\([0-9]{3}\\))?[0-9]{3}-[0-9]{4}$"}
-    resolved_schema = Schema.resolve(schema)
+  property_test("string regex generation should work", %{
+    "type" => "string",
+    "pattern" => "^(\\([0-9]{3}\\))?[0-9]{3}-[0-9]{4}$"
+  })
 
-    check all(data <- JsonDataFaker.generate(schema)) do
-      assert Validator.valid?(resolved_schema, data)
-    end
-  end
+  property_test("string enum generation should work", %{
+    "type" => "string",
+    "enum" => ["active", "completed"]
+  })
 
-  property "string enum generation should work" do
-    schema = %{"type" => "string", "enum" => ["active", "completed"]}
-    resolved_schema = Schema.resolve(schema)
+  property_test("string with max / min length should work", %{
+    "type" => "string",
+    "minLength" => 200,
+    "maxLength" => 201
+  })
 
-    check all(data <- JsonDataFaker.generate(schema)) do
-      assert Validator.valid?(resolved_schema, data)
-    end
-  end
+  property_test("integer generation should work", %{
+    "type" => "integer",
+    "minimum" => 5,
+    "maximum" => 20
+  })
 
-  property "string with max / min length should work" do
-    schema = %{"type" => "string", "minLength" => 200, "maxLength" => 201}
-    resolved_schema = Schema.resolve(schema)
 
-    check all(data <- JsonDataFaker.generate(schema)) do
-      assert Validator.valid?(resolved_schema, data)
-    end
-  end
+  property_test("complex object generation should work", @complex_object)
 
-  property "integer generation should work" do
-    schema = %{"type" => "integer", "minimum" => 5, "maximum" => 20}
-    resolved_schema = Schema.resolve(schema)
-
-    check all(data <- JsonDataFaker.generate(schema)) do
-      assert Validator.valid?(resolved_schema, data)
-    end
-  end
-
-  property "complex object generation should work" do
-    resolved_schema = Schema.resolve(@complex_object)
-
-    check all(data <- JsonDataFaker.generate(@complex_object)) do
-      assert Validator.valid?(resolved_schema, data)
-    end
-  end
-
-  property "array of object generation should work" do
-    schema = %{
-      "items" => @complex_object,
-      "type" => "array"
-    }
-
-    resolved_schema = Schema.resolve(schema)
-
-    check all(data <- JsonDataFaker.generate(schema)) do
-      assert Validator.valid?(resolved_schema, data)
-    end
-  end
+  property_test("array of object generation should work", %{
+    "items" => @complex_object,
+    "type" => "array"
+  })
 
   property "empty or invalid schema should return nil" do
     schema = %{}
