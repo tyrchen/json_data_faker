@@ -69,6 +69,13 @@ defmodule JsonDataFaker do
 
   defp generate_by_type(%{"enum" => choices}, _root, _opts), do: StreamData.member_of(choices)
 
+  defp generate_by_type(%{"type" => [_ | _] = types} = schema, root, opts) do
+    types
+    |> Enum.map(fn type -> Map.put(schema, "type", type) end)
+    |> Enum.map(&generate_by_type(&1, root, opts))
+    |> StreamData.one_of()
+  end
+
   defp generate_by_type(%{"type" => "boolean"}, _root, _opts), do: boolean()
 
   defp generate_by_type(%{"type" => "string"} = schema, _root, _opts), do: generate_string(schema)

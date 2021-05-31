@@ -269,6 +269,11 @@ defmodule JsonDataFakerTest do
     %{"anyOf" => [%{"type" => "integer"}, @complex_object], "components" => @components}
   ])
 
+  property_test("array of types generation should work", [
+    %{"type" => ["integer", "null"], "minimum" => 10},
+    %{"type" => ["integer", "string"], "maximum" => 10, "minLength" => 10}
+  ])
+
   property "empty or invalid schema should return nil" do
     schema = %{}
 
