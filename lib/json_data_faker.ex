@@ -6,6 +6,12 @@ defmodule JsonDataFaker do
   require Logger
   alias ExJsonSchema.Schema
 
+  if Mix.env() == :test do
+    defp unshrink(stream), do: stream
+  else
+    defp unshrink(stream), do: StreamData.unshrinkable(stream)
+  end
+
   @doc """
   generate fake data with given schema. It could be a raw json schema or ExJsonSchema.Schema.Root type.
 
@@ -24,13 +30,16 @@ defmodule JsonDataFaker do
   def generate(schema, opts \\ [])
 
   def generate(%Schema.Root{} = schema, opts) do
-    generate_by_type(schema.schema, schema, opts)
+    schema.schema
+    |> generate_by_type(schema, opts)
+    |> unshrink()
   end
 
   def generate(schema, opts) when is_map(schema) do
     schema
     |> Schema.resolve()
     |> generate(opts)
+    |> unshrink()
   rescue
     e ->
       Logger.error("Failed to generate data. #{inspect(e)}")
