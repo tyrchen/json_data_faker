@@ -56,9 +56,29 @@ defmodule JsonDataFaker do
 
   defp generate_by_type(%{"type" => "array"} = schema) do
     inner_schema = schema["items"]
-    count = Enum.random(2..5)
 
-    StreamData.list_of(generate_by_type(inner_schema), length: count)
+    opts =
+      Enum.reduce(schema, [], fn
+        {"minItems", min}, acc -> Keyword.put(acc, :min_length, min)
+        {"maxItems", max}, acc -> Keyword.put(acc, :max_length, max)
+        _, acc -> acc
+      end)
+
+    case Map.get(schema, "uniqueItems", false) do
+      false ->
+        StreamData.list_of(generate_by_type(inner_schema), opts)
+
+      true ->
+        inner_schema
+        |> generate_by_type()
+        |> StreamData.scale(fn size ->
+          case Keyword.get(opts, :max_length, false) do
+            false -> size
+            max -> max * 3
+          end
+        end)
+        |> StreamData.uniq_list_of(opts)
+    end
   end
 
   defp generate_by_type(%{"type" => "object"} = schema) do

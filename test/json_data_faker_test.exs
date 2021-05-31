@@ -162,6 +162,32 @@ defmodule JsonDataFakerTest do
     "type" => "array"
   })
 
+  property_test("minItems array generation should work", %{
+    "items" => %{"type" => "string"},
+    "type" => "array",
+    "minItems" => 5
+  })
+
+  property_test("maxItems array generation should work", %{
+    "items" => %{"type" => "string"},
+    "type" => "array",
+    "maxItems" => 5
+  })
+
+  property_test("uniqueItems array generation should work", %{
+    "items" => %{"type" => "string"},
+    "type" => "array",
+    "uniqueItems" => true
+  })
+
+  property_test("array generation with all options should work", %{
+    "items" => %{"type" => "integer"},
+    "type" => "array",
+    "minItems" => 5,
+    "maxItems" => 8,
+    "uniqueItems" => true
+  })
+
   property "empty or invalid schema should return nil" do
     schema = %{}
 
