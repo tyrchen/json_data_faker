@@ -45,9 +45,13 @@ defmodule JsonDataFaker do
   end
 
   defp generate_by_type(%{"type" => "integer"} = schema) do
-    min = schema["minimum"] || 10
-    max = schema["maximum"] || 1000
-    integer(min..max)
+    generate_integer(
+      schema["minimum"],
+      schema["maximum"],
+      Map.get(schema, "exclusiveMinimum", false),
+      Map.get(schema, "exclusiveMaximum", false),
+      schema["multipleOf"]
+    )
   end
 
   defp generate_by_type(%{"type" => "array"} = schema) do
@@ -108,6 +112,42 @@ defmodule JsonDataFaker do
         _ -> s
       end
     end)
+  end
+
+  defp generate_integer(nil, nil, _, _, nil), do: integer()
+
+  defp generate_integer(nil, nil, _, _, multipleOf), do: map(integer(), &(&1 * multipleOf))
+
+  defp generate_integer(min, nil, exclusive, _, nil),
+    do: map(positive_integer(), &(&1 - 1 + min + if(exclusive, do: 1, else: 0)))
+
+  defp generate_integer(nil, max, _, exclusive, nil),
+    do: map(positive_integer(), &(max + if(exclusive, do: -1, else: 0) - (&1 - 1)))
+
+  defp generate_integer(min, nil, exclusive, _, multipleOf) do
+    min = min + if(exclusive, do: 1, else: 0)
+    min = Integer.floor_div(min, multipleOf) + 1
+    map(positive_integer(), &((&1 - 1 + min) * multipleOf))
+  end
+
+  defp generate_integer(nil, max, _, exclusive, multipleOf) do
+    max = max + if(exclusive, do: -1, else: 0)
+    max = Integer.floor_div(max, multipleOf)
+    map(positive_integer(), &((max - (&1 - 1)) * multipleOf))
+  end
+
+  defp generate_integer(min, max, emin, emax, nil) do
+    min = min + if(emin, do: 1, else: 0)
+    max = max + if(emax, do: -1, else: 0)
+    integer(min..max)
+  end
+
+  defp generate_integer(min, max, emin, emax, multipleOf) do
+    min = min + if(emin, do: 1, else: 0)
+    max = max + if(emax, do: -1, else: 0)
+    min = Integer.floor_div(min, multipleOf) + 1
+    max = Integer.floor_div(max, multipleOf)
+    map(integer(min..max), &(&1 * multipleOf))
   end
 
   defp stream_gen(fun) do

@@ -89,6 +89,71 @@ defmodule JsonDataFakerTest do
     "maximum" => 20
   })
 
+  property_test("integer generation with exclusive endpoints should work", %{
+    "type" => "integer",
+    "minimum" => 3,
+    "maximum" => 7,
+    "exclusiveMinimum" => true,
+    "exclusiveMaximum" => true
+  })
+
+  property_test("integer generation with exclusive and negative endpoints should work", %{
+    "type" => "integer",
+    "minimum" => -7,
+    "maximum" => -3,
+    "exclusiveMinimum" => true,
+    "exclusiveMaximum" => true
+  })
+
+  property_test("integer generation with multipleOf and min should work", %{
+    "type" => "integer",
+    "minimum" => 5,
+    "multipleOf" => 3
+  })
+
+  property_test("integer generation with multipleOf and negative min should work", %{
+    "type" => "integer",
+    "minimum" => -5,
+    "multipleOf" => 3
+  })
+
+  property_test("integer generation with multipleOf and max should work", %{
+    "type" => "integer",
+    "maximum" => 20,
+    "multipleOf" => 3
+  })
+
+  property_test("integer generation with multipleOf and negative max should work", %{
+    "type" => "integer",
+    "maximum" => -20,
+    "multipleOf" => 3
+  })
+
+  property_test("integer generation with multipleOf should work", %{
+    "type" => "integer",
+    "minimum" => 5,
+    "maximum" => 20,
+    "multipleOf" => 3
+  })
+
+  property_test("integer generation with multipleOf and negative endpoints should work", %{
+    "type" => "integer",
+    "minimum" => -20,
+    "maximum" => -5,
+    "multipleOf" => 3
+  })
+
+  property_test(
+    "integer generation with multipleOf and exclusive and negative endpoints should work",
+    %{
+      "type" => "integer",
+      "minimum" => -21,
+      "maximum" => -3,
+      "multipleOf" => 3,
+      "exclusiveMinimum" => true,
+      "exclusiveMaximum" => true
+    }
+  )
 
   property_test("complex object generation should work", @complex_object)
 
