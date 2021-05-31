@@ -131,18 +131,14 @@ defmodule JsonDataFaker do
     do: Randex.stream(Regex.compile!(regex), mod: Randex.Generator.StreamData)
 
   defp generate_string(schema) do
-    min = schema["minLength"] || 0
-    max = schema["maxLength"] || 1024
+    opts =
+      Enum.reduce(schema, [], fn
+        {"minLength", min}, acc -> Keyword.put(acc, :min_length, min)
+        {"maxLength", max}, acc -> Keyword.put(acc, :max_length, max)
+        _, acc -> acc
+      end)
 
-    stream_gen(fn ->
-      s = Faker.Lorem.word()
-
-      case String.length(s) do
-        v when v > max -> String.slice(s, 0, max - 1)
-        v when v < min -> String.slice(Faker.Lorem.sentence(min), 0, min)
-        _ -> s
-      end
-    end)
+    string(:ascii, opts)
   end
 
   defp generate_integer(nil, nil, _, _, nil), do: integer()
