@@ -1,12 +1,14 @@
 defmodule JsonDataFakerTest.Helpers do
-  defmacro property_test(name, schema) do
+  defmacro property_test(name, schemas) do
     quote do
       property unquote(name) do
-        resolved_schema = ExJsonSchema.Schema.resolve(unquote(schema))
+        Enum.each(List.wrap(unquote(schemas)), fn schema ->
+          resolved_schema = ExJsonSchema.Schema.resolve(schema)
 
-        check all(data <- JsonDataFaker.generate(unquote(schema))) do
-          assert ExJsonSchema.Validator.valid?(resolved_schema, data)
-        end
+          check all(data <- JsonDataFaker.generate(schema)) do
+            assert ExJsonSchema.Validator.valid?(resolved_schema, data)
+          end
+        end)
       end
     end
   end
@@ -72,10 +74,19 @@ defmodule JsonDataFakerTest do
     "pattern" => "^(\\([0-9]{3}\\))?[0-9]{3}-[0-9]{4}$"
   })
 
-  property_test("string enum generation should work", %{
-    "type" => "string",
-    "enum" => ["active", "completed"]
-  })
+  property_test("enum generation should work", [
+    %{
+      "type" => "string",
+      "enum" => ["active", "completed"]
+    },
+    %{
+      "type" => "integer",
+      "enum" => [1, 2, 7]
+    },
+    %{
+      "enum" => [[1, 2], %{"foo" => "bar"}]
+    }
+  ])
 
   property_test("string with max / min length should work", %{
     "type" => "string",

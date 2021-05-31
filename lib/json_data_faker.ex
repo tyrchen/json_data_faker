@@ -36,13 +36,11 @@ defmodule JsonDataFaker do
   def generate(_schema), do: nil
 
   # private functions
-  defp generate_by_type(%{"type" => "boolean"}) do
-    boolean()
-  end
+  defp generate_by_type(%{"enum" => choices}), do: StreamData.member_of(choices)
 
-  defp generate_by_type(%{"type" => "string"} = schema) do
-    generate_string(schema)
-  end
+  defp generate_by_type(%{"type" => "boolean"}), do: boolean()
+
+  defp generate_by_type(%{"type" => "string"} = schema), do: generate_string(schema)
 
   defp generate_by_type(%{"type" => "integer"} = schema) do
     generate_integer(
@@ -113,8 +111,6 @@ defmodule JsonDataFaker do
       "https://source.unsplash.com/random/#{w}x#{h}"
     end)
   end
-
-  defp generate_string(%{"enum" => choices}), do: StreamData.member_of(choices)
 
   defp generate_string(%{"pattern" => regex}),
     do: Randex.stream(Regex.compile!(regex), mod: Randex.Generator.StreamData)
