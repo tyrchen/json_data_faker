@@ -22,7 +22,7 @@ defmodule JsonDataFaker do
       iex> %{"title" => _title} = JsonDataFaker.generate(schema) |> Enum.take(1) |> List.first()
   """
   def generate(%Schema.Root{} = schema) do
-    generate_by_type(schema.schema)
+    generate_by_type(schema.schema, schema)
   end
 
   def generate(schema) when is_map(schema) do
@@ -36,13 +36,20 @@ defmodule JsonDataFaker do
   def generate(_schema), do: nil
 
   # private functions
-  defp generate_by_type(%{"enum" => choices}), do: StreamData.member_of(choices)
+  defp generate_by_type(%{"$ref" => ref}, root) do
+    case ExJsonSchema.Schema.get_fragment(root, ref) do
+      {:ok, resolved} -> generate_by_type(resolved, root)
+      _ -> nil
+    end
+  end
 
-  defp generate_by_type(%{"type" => "boolean"}), do: boolean()
+  defp generate_by_type(%{"enum" => choices}, _root), do: StreamData.member_of(choices)
 
-  defp generate_by_type(%{"type" => "string"} = schema), do: generate_string(schema)
+  defp generate_by_type(%{"type" => "boolean"}, _root), do: boolean()
 
-  defp generate_by_type(%{"type" => "integer"} = schema) do
+  defp generate_by_type(%{"type" => "string"} = schema, _root), do: generate_string(schema)
+
+  defp generate_by_type(%{"type" => "integer"} = schema, _root) do
     generate_integer(
       schema["minimum"],
       schema["maximum"],
@@ -52,7 +59,7 @@ defmodule JsonDataFaker do
     )
   end
 
-  defp generate_by_type(%{"type" => "array"} = schema) do
+  defp generate_by_type(%{"type" => "array"} = schema, root) do
     inner_schema = schema["items"]
 
     opts =
@@ -64,11 +71,11 @@ defmodule JsonDataFaker do
 
     case Map.get(schema, "uniqueItems", false) do
       false ->
-        StreamData.list_of(generate_by_type(inner_schema), opts)
+        StreamData.list_of(generate_by_type(inner_schema, root), opts)
 
       true ->
         inner_schema
-        |> generate_by_type()
+        |> generate_by_type(root)
         |> StreamData.scale(fn size ->
           case Keyword.get(opts, :max_length, false) do
             false -> size
@@ -79,13 +86,13 @@ defmodule JsonDataFaker do
     end
   end
 
-  defp generate_by_type(%{"type" => "object", "properties" => properties} = schema) do
+  defp generate_by_type(%{"type" => "object", "properties" => properties} = schema, root) do
     required = Map.get(schema, "required", [])
     {required_props, optional_props} = Enum.split_with(properties, &(elem(&1, 0) in required))
 
     [required_map, optional_map] =
       Enum.map([required_props, optional_props], fn props ->
-        Map.new(props, fn {key, inner_schema} -> {key, generate_by_type(inner_schema)} end)
+        Map.new(props, fn {key, inner_schema} -> {key, generate_by_type(inner_schema, root)} end)
       end)
 
     required_map
@@ -97,7 +104,7 @@ defmodule JsonDataFaker do
     end)
   end
 
-  defp generate_by_type(_schema), do: StreamData.constant(nil)
+  defp generate_by_type(_schema, _root), do: StreamData.constant(nil)
 
   defp generate_string(%{"format" => "date-time"}),
     do: stream_gen(fn -> 30 |> Faker.DateTime.backward() |> DateTime.to_iso8601() end)

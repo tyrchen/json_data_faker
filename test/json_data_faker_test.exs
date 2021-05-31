@@ -24,9 +24,7 @@ defmodule JsonDataFakerTest do
   @complex_object %{
     "properties" => %{
       "body" => %{
-        "maxLength" => 140,
-        "minLength" => 3,
-        "type" => "string"
+        "$ref" => "#/components/schemas/Body"
       },
       "created" => %{
         "format" => "date-time",
@@ -53,6 +51,20 @@ defmodule JsonDataFakerTest do
     ],
     "type" => "object"
   }
+
+  @components %{
+    "schemas" => %{
+      "Body" => %{
+        "enum" => [
+          "active",
+          "completed"
+        ],
+        "type" => "string"
+      }
+    }
+  }
+
+  @full_object Map.put(@complex_object, "components", @components)
 
   property "string uuid generation should work" do
     schema = %{"type" => "string", "format" => "uuid"}
@@ -175,11 +187,12 @@ defmodule JsonDataFakerTest do
     }
   })
 
-  property_test("complex object generation should work", @complex_object)
+  property_test("complex object generation should work", @full_object)
 
   property_test("array of object generation should work", %{
     "items" => @complex_object,
-    "type" => "array"
+    "type" => "array",
+    "components" => @components
   })
 
   property_test("minItems array generation should work", %{
