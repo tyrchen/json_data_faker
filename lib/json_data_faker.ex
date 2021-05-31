@@ -134,7 +134,7 @@ defmodule JsonDataFaker do
   end
 
   defp generate_string(%{"pattern" => regex}),
-    do: Randex.stream(Regex.compile!(regex), mod: Randex.Generator.StreamData)
+    do: Randex.stream(Regex.compile!(regex), mod: Randex.Generator.StreamData, max_repetition: 10)
 
   defp generate_string(schema) do
     opts =
