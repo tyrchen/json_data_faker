@@ -1,11 +1,11 @@
 defmodule JsonDataFakerTest.Helpers do
-  defmacro property_test(name, schemas) do
+  defmacro property_test(name, schemas, opts \\ []) do
     quote do
       property unquote(name) do
         Enum.each(List.wrap(unquote(schemas)), fn schema ->
           resolved_schema = ExJsonSchema.Schema.resolve(schema)
 
-          check all(data <- JsonDataFaker.generate(schema)) do
+          check all(data <- JsonDataFaker.generate(schema, unquote(opts))) do
             assert ExJsonSchema.Validator.valid?(resolved_schema, data)
           end
         end)
@@ -218,14 +218,9 @@ defmodule JsonDataFakerTest do
 
   property_test("complex object generation should work", @full_object)
 
-  property "require_optional_properties property should work" do
-    resolved_schema = ExJsonSchema.Schema.resolve(@full_object)
-
-    check all(data <- JsonDataFaker.generate(@full_object, require_optional_properties: true)) do
-      assert ExJsonSchema.Validator.valid?(resolved_schema, data)
-      assert Map.has_key?(data, "status")
-    end
-  end
+  property_test("require_optional_properties property should work", @full_object,
+    require_optional_properties: true
+  )
 
   property_test("array of object generation should work", %{
     "items" => @complex_object,
@@ -400,6 +395,36 @@ defmodule JsonDataFakerTest do
       }
     }
   ])
+
+  property_test("patternProperties generation should work", %{
+    "patternProperties" => %{
+      "^[0-9]{4}$" => %{"type" => "integer"},
+      "^[a-z]{4}$" => %{"type" => "string"}
+    },
+    "type" => "object",
+    "properties" => %{
+      "foo" => %{"type" => "boolean"},
+      "bar" => %{"type" => "array", "items" => %{"type" => "integer"}}
+    },
+    "required" => ["foo"]
+  })
+
+  property_test(
+    "patternProperties generation with require_optional_properties should work",
+    %{
+      "patternProperties" => %{
+        "^[0-9]{4}$" => %{"type" => "integer"},
+        "^[a-z]{4}$" => %{"type" => "string"}
+      },
+      "type" => "object",
+      "properties" => %{
+        "foo" => %{"type" => "boolean"},
+        "bar" => %{"type" => "array", "items" => %{"type" => "integer"}}
+      },
+      "required" => ["foo"]
+    },
+    require_optional_properties: true
+  )
 
   property "empty or invalid schema should return nil" do
     schema = %{}
