@@ -301,6 +301,106 @@ defmodule JsonDataFakerTest do
     %{"type" => ["integer", "string"], "maximum" => 10, "minLength" => 10}
   ])
 
+  property_test("allOf generation should work", [
+    %{"allOf" => [%{"type" => "integer"}, %{"type" => "integer", "minimum" => 10}]},
+    %{
+      "allOf" => [
+        %{"type" => "string", "maxLength" => 4},
+        %{"type" => "string", "minLength" => 2}
+      ]
+    },
+    %{
+      "allOf" => [
+        %{"type" => "object", "properties" => %{"foo" => %{"type" => "string"}}},
+        %{
+          "type" => "object",
+          "required" => ["bar"],
+          "properties" => %{"bar" => %{"type" => "boolean"}}
+        }
+      ]
+    }
+  ])
+
+  property_test("allOf generation with merged values should work", [
+    %{
+      "allOf" => [
+        %{"type" => "integer", "minimum" => 12, "maximum" => 18, "multipleOf" => 3},
+        %{"type" => "integer", "minimum" => 10, "maximum" => 20, "multipleOf" => 2}
+      ]
+    },
+    %{
+      "allOf" => [
+        %{"type" => "string", "maxLength" => 4, "minLength" => 2},
+        %{"type" => "string", "maxLength" => 7, "minLength" => 3}
+      ]
+    },
+    %{
+      "allOf" => [
+        %{
+          "type" => "object",
+          "required" => ["bar"],
+          "properties" => %{
+            "bar" => %{"type" => "string"},
+            "foo" => %{"type" => "string", "enum" => ["a", "b", "c"]}
+          }
+        },
+        %{
+          "type" => "object",
+          "required" => ["foo"],
+          "properties" => %{"foo" => %{"type" => "string", "enum" => ["b", "c", "d"]}}
+        }
+      ]
+    }
+  ])
+
+  property_test("allOf generation with refs should work", [
+    %{
+      "allOf" => [
+        %{"$ref" => "#/components/schemas/Obj1"},
+        %{
+          "type" => "object",
+          "required" => ["foo"],
+          "properties" => %{"foo" => %{"type" => "string", "enum" => ["b", "c", "d"]}}
+        }
+      ],
+      "components" => %{
+        "schemas" => %{
+          "Obj1" => %{
+            "type" => "object",
+            "required" => ["bar"],
+            "properties" => %{
+              "bar" => %{"type" => "string"},
+              "foo" => %{"type" => "string", "enum" => ["a", "b", "c"]}
+            }
+          }
+        }
+      }
+    },
+    %{
+      "allOf" => [
+        %{"$ref" => "#/components/schemas/Obj1"},
+        %{"$ref" => "#/components/schemas/Obj2"}
+      ],
+      "components" => %{
+        "schemas" => %{
+          "Obj1" => %{
+            "type" => "object",
+            "required" => ["bar"],
+            "properties" => %{
+              "bar" => %{"type" => "string"},
+              "foo" => %{"type" => "string", "enum" => ["a", "b", "c"]}
+            }
+          },
+          "Obj2" => %{
+            "type" => "object",
+            "required" => ["foo"],
+            "properties" => %{"foo" => %{"type" => "string", "enum" => ["b", "c", "d"]}}
+          }
+        }
+      }
+    }
+  ])
+
   property "empty or invalid schema should return nil" do
     schema = %{}
 

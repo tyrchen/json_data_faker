@@ -37,24 +37,18 @@ defmodule JsonDataFaker.Generator.Misc do
   end
 
   defp all_of_merger(key, v1, v2, _root)
-       when key in ["minLength", "minProperties", "minimum", "maxItems"],
+       when key in ["minLength", "minProperties", "minimum", "minItems"],
        do: max(v1, v2)
 
   defp all_of_merger(key, v1, v2, _root)
-       when key in ["maxLength", "maxProperties", "maximum", "minItems"],
+       when key in ["maxLength", "maxProperties", "maximum", "maxItems"],
        do: min(v1, v2)
 
   defp all_of_merger(key, v1, v2, _root)
        when key in ["uniqueItems", "exclusiveMaximum", "exclusiveMinimum"],
        do: v1 or v2
 
-  defp all_of_merger("multipleOf", v1, v2, _root) do
-    # TODO fix
-    case Integer.gcd(v1, v2) do
-      1 -> v1 * v2
-      _ -> max(v1, v2)
-    end
-  end
+  defp all_of_merger("multipleOf", v1, v2, _root), do: lcm(v1, v2)
 
   defp all_of_merger("enum", v1, v2, _root), do: Enum.filter(v1, &(&1 in v2))
 
@@ -63,8 +57,7 @@ defmodule JsonDataFaker.Generator.Misc do
   defp all_of_merger(_property, %{"$ref" => _} = v1, %{"$ref" => _} = v2, root) do
     f1 = resolve(v1, root)
     f2 = resolve(v2, root)
-    all_of_merger_root = fn root -> &all_of_merger(&1, &2, &3, root) end
-    Map.merge(f1, f2, all_of_merger_root.(root))
+    all_of_merger(nil, f1, f2, root)
   end
 
   defp all_of_merger(_key, m1, m2, root) when is_map(m1) and is_map(m2) do
@@ -72,8 +65,14 @@ defmodule JsonDataFaker.Generator.Misc do
     Map.merge(m1, m2, all_of_merger_root.(root))
   end
 
+  # NOTE
+  # here fall also "pattern" and "format" keywords
+  # there is no easy way of merging them so we keep only the second value
+  # be aware that this can lead to generated values that are not valid against the schema
   defp all_of_merger(_key, _v1, v2, _root), do: v2
 
   defp resolve(%{"$ref" => ref}, root), do: ExJsonSchema.Schema.get_fragment!(root, ref)
   defp resolve(schema, _root), do: schema
+
+  defp lcm(m, n), do: trunc(m * n / Integer.gcd(m, n))
 end
