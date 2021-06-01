@@ -80,7 +80,7 @@ defmodule JsonDataFaker.Generator.Object do
 
     value_generator =
       if(schema == %{},
-        do: JsonDataFaker.Generator.Utils.json(),
+        do: JsonDataFaker.Utils.json(),
         else: JsonDataFaker.generate_by_type(schema, root, opts)
       )
 

@@ -1,6 +1,8 @@
 defmodule JsonDataFaker.Generator.Array do
   @moduledoc false
 
+  alias JsonDataFaker.Utils
+
   def generate(
         %{"additionalItems" => false, "items" => [_ | _] = items, "minItems" => min},
         _root,
@@ -15,7 +17,7 @@ defmodule JsonDataFaker.Generator.Array do
     maxItems = if(not is_nil(maxItems), do: min(maxItems, len), else: len)
 
     generate_additional_schema(
-      JsonDataFaker.Generator.Utils.json(),
+      Utils.json(),
       items,
       schema["minItems"],
       maxItems,
@@ -27,7 +29,7 @@ defmodule JsonDataFaker.Generator.Array do
   def generate(%{"additionalItems" => ai, "items" => [_ | _] = items} = schema, root, opts) do
     generate_additional_schema(
       if(is_boolean(ai),
-        do: JsonDataFaker.Generator.Utils.json(),
+        do: Utils.json(),
         else: JsonDataFaker.generate_by_type(ai, root, opts)
       ),
       items,

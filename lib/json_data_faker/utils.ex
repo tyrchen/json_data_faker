@@ -1,4 +1,4 @@
-defmodule JsonDataFaker.Generator.Utils do
+defmodule JsonDataFaker.Utils do
   @moduledoc false
 
   def json do
