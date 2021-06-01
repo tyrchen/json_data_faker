@@ -255,17 +255,87 @@ defmodule JsonDataFakerTest do
     %{
       "items" => [%{"type" => "integer"}, %{"type" => "string"}],
       "type" => "array",
+      "additionalItems" => false,
+      "minItems" => 2
+    },
+    %{
+      "items" => [%{"type" => "integer"}, %{"type" => "string"}],
+      "type" => "array",
+      "additionalItems" => false,
+      "maxItems" => 1
+    },
+    %{
+      "items" => [%{"type" => "integer"}, %{"type" => "string"}],
+      "type" => "array",
       "additionalItems" => true
+    },
+    %{
+      "items" => [%{"type" => "integer"}, %{"type" => "string"}],
+      "type" => "array",
+      "additionalItems" => true,
+      "minItems" => 3
+    },
+    %{
+      "items" => [%{"type" => "integer"}, %{"type" => "string"}],
+      "type" => "array",
+      "additionalItems" => true,
+      "maxItems" => 1
+    },
+    %{
+      "items" => [%{"type" => "integer"}, %{"type" => "string"}],
+      "type" => "array",
+      "additionalItems" => true,
+      "maxItems" => 3
+    },
+    %{
+      "items" => [%{"type" => "integer"}, %{"type" => "string"}],
+      "type" => "array",
+      "additionalItems" => true,
+      "maxItems" => 3,
+      "minItems" => 1
     }
   ])
 
   property_test(
     "array generation with additionalItems as schema and array of items should work",
-    %{
-      "type" => "array",
-      "items" => [%{"type" => "integer"}, %{"type" => "string"}],
-      "additionalItems" => %{"type" => "object"}
-    }
+    [
+      %{
+        "type" => "array",
+        "items" => [%{"type" => "integer"}, %{"type" => "string"}],
+        "additionalItems" => %{"type" => "object"}
+      },
+      %{
+        "type" => "array",
+        "items" => [%{"type" => "integer"}, %{"type" => "string"}],
+        "additionalItems" => %{"type" => "object"},
+        "minItems" => 1
+      },
+      %{
+        "type" => "array",
+        "items" => [%{"type" => "integer"}, %{"type" => "string"}],
+        "additionalItems" => %{"type" => "object"},
+        "minItems" => 3
+      },
+      %{
+        "type" => "array",
+        "items" => [%{"type" => "integer"}, %{"type" => "string"}],
+        "additionalItems" => %{"type" => "object"},
+        "maxItems" => 1
+      },
+      %{
+        "type" => "array",
+        "items" => [%{"type" => "integer"}, %{"type" => "string"}],
+        "additionalItems" => %{"type" => "object"},
+        "maxItems" => 3
+      },
+      %{
+        "type" => "array",
+        "items" => [%{"type" => "integer"}, %{"type" => "string"}],
+        "additionalItems" => %{"type" => "object"},
+        "maxItems" => 3,
+        "minItems" => 1
+      }
+    ]
   )
 
   property_test("array generation with all options should work", %{
