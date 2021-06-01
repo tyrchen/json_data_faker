@@ -56,7 +56,7 @@ defmodule JsonDataFaker.Generator.Number do
 
   defp generate_integer(min, nil, exclusive, _, multipleOf) do
     min = min + if(exclusive, do: 1, else: 0)
-    min = Integer.floor_div(min, multipleOf) + 1
+    min = Integer.floor_div(min, multipleOf) + if(rem(min, multipleOf) == 0, do: 0, else: 1)
     map(positive_integer(), &((&1 - 1 + min) * multipleOf))
   end
 
@@ -69,15 +69,25 @@ defmodule JsonDataFaker.Generator.Number do
   defp generate_integer(min, max, emin, emax, nil) do
     min = min + if(emin, do: 1, else: 0)
     max = max + if(emax, do: -1, else: 0)
-    integer(min..max)
+
+    if min > max do
+      StreamData.constant(nil)
+    else
+      integer(min..max)
+    end
   end
 
   defp generate_integer(min, max, emin, emax, multipleOf) do
     min = min + if(emin, do: 1, else: 0)
     max = max + if(emax, do: -1, else: 0)
-    min = Integer.floor_div(min, multipleOf) + 1
+    min = Integer.floor_div(min, multipleOf) + if(rem(min, multipleOf) == 0, do: 0, else: 1)
     max = Integer.floor_div(max, multipleOf)
-    map(integer(min..max), &(&1 * multipleOf))
+
+    if min > max do
+      StreamData.constant(nil)
+    else
+      map(integer(min..max), &(&1 * multipleOf))
+    end
   end
 
   defp generate_float(nil, nil, _, _), do: float()
