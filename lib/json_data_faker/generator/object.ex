@@ -81,11 +81,7 @@ defmodule JsonDataFaker.Generator.Object do
       |> Randex.stream(mod: Randex.Generator.StreamData, max_repetition: 10)
       |> StreamData.filter(&(&1 not in keys_blacklist))
 
-    value_generator =
-      if(schema == %{},
-        do: JsonDataFaker.Utils.json(),
-        else: JsonDataFaker.generate_by_type(schema, root, opts)
-      )
+    value_generator = JsonDataFaker.generate_by_type(schema, root, opts)
 
     StreamData.tuple({key_generator, value_generator})
   end

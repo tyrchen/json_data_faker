@@ -514,12 +514,6 @@ defmodule JsonDataFakerTest do
   )
 
   property "empty or invalid schema should return nil" do
-    schema = %{}
-
-    check all(data <- JsonDataFaker.generate(schema)) do
-      assert is_nil(data)
-    end
-
     schema = nil
 
     check all(data <- JsonDataFaker.generate(schema)) do

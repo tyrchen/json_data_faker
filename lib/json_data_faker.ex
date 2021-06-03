@@ -83,5 +83,7 @@ defmodule JsonDataFaker do
   def generate_by_type(%{"type" => type} = schema, root, opts) when type in ["integer", "number"],
     do: Number.generate(schema, root, opts)
 
-  def generate_by_type(_schema, _root, _opts), do: StreamData.constant(nil)
+  def generate_by_type(%{"type" => "null"}, _root, _opts), do: StreamData.constant(nil)
+
+  def generate_by_type(_schema, _root, _opts), do: JsonDataFaker.Utils.json()
 end

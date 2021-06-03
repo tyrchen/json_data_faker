@@ -6,11 +6,12 @@ defmodule JsonDataFaker.Utils do
       StreamData.one_of([
         StreamData.boolean(),
         StreamData.integer(),
-        StreamData.string(:printable),
+        StreamData.string(:ascii),
         StreamData.float()
       ])
 
-    map_key = StreamData.string(:printable, min_length: 1)
+    key_chars = Enum.concat([?a..?z, ?A..?Z, [?-, ?_]])
+    map_key = StreamData.string(key_chars, min_length: 1)
 
     StreamData.tree(simple_value, fn leaf ->
       StreamData.one_of([StreamData.list_of(leaf), StreamData.map_of(map_key, leaf)])
