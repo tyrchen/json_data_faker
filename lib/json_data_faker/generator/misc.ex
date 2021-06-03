@@ -1,9 +1,11 @@
 defmodule JsonDataFaker.Generator.Misc do
   @moduledoc false
 
+  alias JsonDataFaker.Utils
+
   def generate(%{"$ref" => _} = schema, root, opts) do
     schema
-    |> resolve(root)
+    |> Utils.schema_resolve(root)
     |> JsonDataFaker.generate_by_type(root, opts)
   end
 
@@ -32,7 +34,7 @@ defmodule JsonDataFaker.Generator.Misc do
     all_of_merger_root = fn root -> &all_of_merger(&1, &2, &3, root) end
 
     Enum.reduce(all_ofs, %{}, fn all_of, acc ->
-      Map.merge(acc, resolve(all_of, root), all_of_merger_root.(root))
+      Map.merge(acc, Utils.schema_resolve(all_of, root), all_of_merger_root.(root))
     end)
   end
 
@@ -55,8 +57,8 @@ defmodule JsonDataFaker.Generator.Misc do
   defp all_of_merger("required", v1, v2, _root), do: v1 |> Enum.concat(v2) |> Enum.uniq()
 
   defp all_of_merger(_property, %{"$ref" => _} = v1, %{"$ref" => _} = v2, root) do
-    f1 = resolve(v1, root)
-    f2 = resolve(v2, root)
+    f1 = Utils.schema_resolve(v1, root)
+    f2 = Utils.schema_resolve(v2, root)
     all_of_merger(nil, f1, f2, root)
   end
 
@@ -70,9 +72,6 @@ defmodule JsonDataFaker.Generator.Misc do
   # there is no easy way of merging them so we keep only the second value
   # be aware that this can lead to generated values that are not valid against the schema
   defp all_of_merger(_key, _v1, v2, _root), do: v2
-
-  defp resolve(%{"$ref" => ref}, root), do: ExJsonSchema.Schema.get_fragment!(root, ref)
-  defp resolve(schema, _root), do: schema
 
   defp lcm(m, n), do: trunc(m * n / Integer.gcd(m, n))
 end

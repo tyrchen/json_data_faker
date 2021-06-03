@@ -19,4 +19,7 @@ defmodule JsonDataFaker.Utils do
     key_chars = Enum.concat([?a..?z, ?A..?Z, [?-, ?_]])
     StreamData.string(key_chars, min_length: 1)
   end
+
+  def schema_resolve(%{"$ref" => ref}, root), do: ExJsonSchema.Schema.get_fragment!(root, ref)
+  def schema_resolve(schema, _root), do: schema
 end

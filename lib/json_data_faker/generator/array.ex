@@ -49,9 +49,33 @@ defmodule JsonDataFaker.Generator.Array do
         _, acc -> acc
       end)
 
+    opts =
+      inner_schema
+      |> Utils.schema_resolve(root)
+      |> case do
+        %{"enum" => enum} ->
+          Keyword.put(
+            opts,
+            :max_length,
+            min(Keyword.get(opts, :max_length, length(enum)), length(enum))
+          )
+
+        %{"type" => "boolean"} ->
+          Keyword.put(
+            opts,
+            :max_length,
+            min(Keyword.get(opts, :max_length, 2), 2)
+          )
+
+        _ ->
+          opts
+      end
+
     case Map.get(schema, "uniqueItems", false) do
       false ->
-        StreamData.list_of(JsonDataFaker.generate_by_type(inner_schema, root, opts), opts)
+        inner_schema
+        |> JsonDataFaker.generate_by_type(root, opts)
+        |> StreamData.list_of(opts)
 
       true ->
         inner_schema
