@@ -30,143 +30,100 @@ defmodule JsonDataFaker.Generator.Object do
 
     additional_props = Map.get(schema, "additionalProperties", %{})
 
+    max_prop = schema["maxProperties"]
+    min_prop = schema["minProperties"] || 0
+    min_extra_props = min_prop - length(required_props) - length(optional_props)
+
+    schema_info = %{
+      required_props: required_props,
+      optional_props: optional_props,
+      pattern_props: pattern_props,
+      additional_props: additional_props,
+      max_prop: max_prop,
+      min_prop: min_prop,
+      min_extra_props: min_extra_props
+    }
+
     if Keyword.get(opts, :require_optional_properties, false) do
-      generate_full_object(
-        schema,
-        required_props,
-        optional_props,
-        pattern_props,
-        additional_props,
-        root,
-        opts
-      )
+      generate_full_object(schema_info, root, opts)
     else
-      generate_object(
-        schema,
-        required_props,
-        optional_props,
-        pattern_props,
-        additional_props,
-        root,
-        opts
-      )
+      generate_object(schema_info, root, opts)
     end
   end
 
-  defp generate_full_object(
-         schema,
-         required_props,
-         optional_props,
-         pattern_props,
-         _additional_props,
-         root,
-         opts
-       ) do
-    max_prop = schema["maxProperties"]
-    min_prop = schema["minProperties"] || 0
+  defp generate_full_object(schema_info, root, opts) do
+    req_count = length(schema_info.required_props)
 
-    req_count = length(required_props)
-    opt_count = length(optional_props)
-    min_pattern_props = min_prop - req_count - opt_count
-
-    optional_props
-    |> (&if(max_prop, do: Enum.take(&1, max_prop - req_count), else: &1)).()
-    |> Enum.concat(required_props)
+    schema_info.optional_props
+    |> (&if(schema_info.max_prop,
+          do: Enum.take(&1, schema_info.max_prop - req_count),
+          else: &1
+        )).()
+    |> Enum.concat(schema_info.required_props)
     |> streamdata_map_builder_args(root, opts)
     |> StreamData.fixed_map()
-    |> merge_map_generators(
-      pattern_properties_generator(
-        pattern_props,
-        required_props,
-        optional_props,
-        min_pattern_props,
-        root,
-        opts
-      ),
-      schema["maxProperties"]
-    )
+    |> add_pattern_properties(schema_info, root, opts)
+    |> add_additonal_properties(schema_info, root, opts)
   end
 
-  defp generate_object(
-         schema,
-         required_props,
-         optional_props,
-         pattern_props,
-         _additional_props,
-         root,
-         opts
-       ) do
-    max_prop = schema["maxProperties"]
-    min_prop = schema["minProperties"] || 0
-
-    req_count = length(required_props)
-    opt_count = length(optional_props)
+  defp generate_object(schema_info, root, opts) do
+    req_count = length(schema_info.required_props)
 
     {optional_required_props, optional_props} =
-      if(req_count < min_prop,
-        do: Enum.split(optional_props, min_prop - req_count),
-        else: {[], optional_props}
+      if(req_count < schema_info.min_prop,
+        do: Enum.split(schema_info.optional_props, schema_info.min_prop - req_count),
+        else: {[], schema_info.optional_props}
       )
 
     required_map =
-      required_props
+      schema_info.required_props
       |> Enum.concat(optional_required_props)
       |> streamdata_map_builder_args(root, opts)
 
     optional_map = streamdata_map_builder_args(optional_props, root, opts)
 
-    min_pattern_props = min_prop - req_count - opt_count
-
     required_map
     |> StreamData.fixed_map()
-    |> merge_map_generators(StreamData.optional_map(optional_map), max_prop)
-    |> merge_map_generators(
-      pattern_properties_generator(
-        pattern_props,
-        required_props,
-        optional_props,
-        min_pattern_props,
-        root,
-        opts
-      ),
-      max_prop
-    )
+    |> merge_map_generators(StreamData.optional_map(optional_map), schema_info.max_prop)
+    |> add_pattern_properties(schema_info, root, opts)
+    |> add_additonal_properties(schema_info, root, opts)
   end
 
-  defp pattern_properties_generator(pp, rp, op, min_props, root, opts) when min_props < 0,
-    do: pattern_properties_generator(pp, rp, op, 0, root, opts)
+  defp add_pattern_properties(generator, %{min_extra_props: mep}, _, _) when mep <= 0,
+    do: generator
 
-  defp pattern_properties_generator(
-         [],
-         _required_props,
-         _optional_props,
-         _min_props,
-         _root,
-         _opts
-       ),
-       do: StreamData.constant(%{})
+  defp add_pattern_properties(generator, %{pattern_props: []}, _, _), do: generator
 
-  defp pattern_properties_generator(
-         pattern_properties,
-         required_props,
-         optional_props,
-         min_props,
-         root,
-         opts
-       ) do
+  defp add_pattern_properties(generator, schema_info, root, opts) do
     # if the generated property has the same name of a standard property of the object than
     # it should be valid against the standar property schema and not against the
     # patternProperty one. In order to avoid generation of invalid properties we filter out
     # patternProperties with name equal to one of the standard properties
-    other_props_names = required_props |> Enum.concat(optional_props) |> Enum.map(&elem(&1, 0))
+    other_props_names =
+      schema_info.required_props
+      |> Enum.concat(schema_info.optional_props)
+      |> Enum.map(&elem(&1, 0))
 
-    pattern_properties
-    |> Enum.map(fn {key_regex, schema} ->
-      pattern_property_generator(key_regex, schema, other_props_names, root, opts)
-    end)
-    |> StreamData.one_of()
-    |> StreamData.list_of(min_length: min_props)
-    |> StreamData.bind(&(&1 |> Map.new() |> StreamData.constant()))
+    pattern_generator = fn previous_map ->
+      ms = map_size(previous_map)
+      min_length = max(schema_info.min_prop - ms, 0)
+
+      max_length =
+        if(is_nil(schema_info.max_prop) or schema_info.max_prop > ms + 2,
+          do: min_length + 2,
+          else: schema_info.max_prop
+        )
+
+      schema_info.pattern_props
+      |> Enum.map(fn {key_regex, schema} ->
+        pattern_property_generator(key_regex, schema, other_props_names, root, opts)
+      end)
+      |> StreamData.one_of()
+      |> StreamData.list_of(min_length: min_length, max_length: max_length)
+      |> StreamData.bind(&(&1 |> Map.new() |> StreamData.constant()))
+    end
+
+    merge_map_generators(generator, pattern_generator, nil)
   end
 
   defp pattern_property_generator(key_regex, schema, keys_blacklist, root, opts) do
@@ -181,6 +138,53 @@ defmodule JsonDataFaker.Generator.Object do
     StreamData.tuple({key_generator, value_generator})
   end
 
+  defp add_additonal_properties(generator, %{min_extra_props: mep}, _, _)
+       when mep <= 0,
+       do: generator
+
+  defp add_additonal_properties(generator, %{additional_props: false}, _, _), do: generator
+
+  defp add_additonal_properties(generator, schema_info, root, opts) do
+    key_allowed? = additional_key_allowed?(schema_info)
+
+    additional_generator = fn previous_map ->
+      ms = map_size(previous_map)
+      min_length = max(schema_info.min_prop - ms, 0)
+
+      max_length =
+        if(is_nil(schema_info.max_prop) or schema_info.max_prop > ms + 2,
+          do: min_length + 2,
+          else: schema_info.max_prop
+        )
+
+      StreamData.map_of(
+        StreamData.filter(JsonDataFaker.Utils.json_key(), &key_allowed?.(&1)),
+        if(schema_info.additional_props == true,
+          do: JsonDataFaker.Utils.json(),
+          else: JsonDataFaker.generate_by_type(schema_info.additional_props, root, opts)
+        ),
+        min_length: min_length,
+        max_length: max_length
+      )
+    end
+
+    merge_map_generators(generator, additional_generator, nil)
+  end
+
+  defp additional_key_allowed?(schema_info) do
+    fixed_keys =
+      schema_info.required_props
+      |> Enum.concat(schema_info.optional_props)
+      |> Enum.map(&elem(&1, 0))
+
+    pattern_keys = Enum.map(schema_info.pattern_props, &elem(&1, 0))
+
+    fn key ->
+      key not in fixed_keys and
+        not Enum.any?(pattern_keys, &(&1 |> Regex.compile!() |> Regex.match?(key)))
+    end
+  end
+
   defp streamdata_map_builder_args(properties, root, opts) do
     Map.new(properties, fn {key, inner_schema} ->
       {key, JsonDataFaker.generate_by_type(inner_schema, root, opts)}
@@ -189,6 +193,8 @@ defmodule JsonDataFaker.Generator.Object do
 
   defp merge_map_generators(map1_gen, map2_gen, nil) do
     StreamData.bind(map1_gen, fn map1 ->
+      map2_gen = if(is_function(map2_gen), do: map2_gen.(map1), else: map2_gen)
+
       StreamData.bind(map2_gen, fn map2 ->
         StreamData.constant(Map.merge(map1, map2))
       end)
@@ -197,6 +203,8 @@ defmodule JsonDataFaker.Generator.Object do
 
   defp merge_map_generators(map1_gen, map2_gen, max_keys) do
     StreamData.bind(map1_gen, fn map1 ->
+      map2_gen = if(is_function(map2_gen), do: map2_gen.(map1), else: map2_gen)
+
       StreamData.bind(map2_gen, fn map2 ->
         case max_keys - map_size(map1) do
           n when n <= 0 ->

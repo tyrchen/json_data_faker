@@ -587,6 +587,82 @@ defmodule JsonDataFakerTest do
     }
   ])
 
+  property_test("additionalProperties generation should work", [
+    %{
+      "additionalProperties" => false,
+      "type" => "object",
+      "properties" => %{
+        "foo" => %{"type" => "boolean"},
+        "bar" => %{"type" => "array", "items" => %{"type" => "integer"}}
+      },
+      "required" => ["foo"]
+    },
+    %{
+      "minProperties" => 3,
+      "additionalProperties" => true,
+      "type" => "object",
+      "properties" => %{
+        "foo" => %{"type" => "boolean"},
+        "bar" => %{"type" => "array", "items" => %{"type" => "integer"}}
+      },
+      "required" => ["foo"]
+    },
+    %{
+      "minProperties" => 3,
+      "additionalProperties" => %{"type" => "integer"},
+      "type" => "object",
+      "properties" => %{
+        "foo" => %{"type" => "boolean"},
+        "bar" => %{"type" => "array", "items" => %{"type" => "integer"}}
+      },
+      "required" => ["foo"]
+    }
+  ])
+
+  property_test("additionalProperties generation with patternProperties should work", [
+    %{
+      "additionalProperties" => false,
+      "patternProperties" => %{
+        "^[0-9]{4}$" => %{"type" => "integer"},
+        "^[a-z]{4}$" => %{"type" => "string"}
+      },
+      "type" => "object",
+      "properties" => %{
+        "foo" => %{"type" => "boolean"},
+        "bar" => %{"type" => "array", "items" => %{"type" => "integer"}}
+      },
+      "required" => ["foo"]
+    },
+    %{
+      "minProperties" => 3,
+      "additionalProperties" => true,
+      "patternProperties" => %{
+        "^[0-9]{4}$" => %{"type" => "integer"},
+        "^[a-z]{4}$" => %{"type" => "string"}
+      },
+      "type" => "object",
+      "properties" => %{
+        "foo" => %{"type" => "boolean"},
+        "bar" => %{"type" => "array", "items" => %{"type" => "integer"}}
+      },
+      "required" => ["foo"]
+    },
+    %{
+      "minProperties" => 3,
+      "additionalProperties" => %{"type" => "integer"},
+      "patternProperties" => %{
+        "^[0-9]{4}$" => %{"type" => "integer"},
+        "^[a-z]{4}$" => %{"type" => "string"}
+      },
+      "type" => "object",
+      "properties" => %{
+        "foo" => %{"type" => "boolean"},
+        "bar" => %{"type" => "array", "items" => %{"type" => "integer"}}
+      },
+      "required" => ["foo"]
+    }
+  ])
+
   property "invalid schema should return nil" do
     schema = nil
 
