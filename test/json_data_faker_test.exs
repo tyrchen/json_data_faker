@@ -513,7 +513,81 @@ defmodule JsonDataFakerTest do
     require_optional_properties: true
   )
 
-  property "empty or invalid schema should return nil" do
+  property_test("object generation with min/maxProperties should work", [
+    %{
+      "properties" => %{
+        "bar" => %{"items" => %{"type" => "integer"}, "type" => "array"},
+        "foo" => %{"type" => "boolean"}
+      },
+      "required" => ["foo"],
+      "type" => "object",
+      "minProperties" => 1
+    },
+    %{
+      "properties" => %{
+        "bar" => %{"items" => %{"type" => "integer"}, "type" => "array"},
+        "foo" => %{"type" => "boolean"}
+      },
+      "required" => ["foo"],
+      "type" => "object",
+      "maxProperties" => 1
+    },
+    %{
+      "properties" => %{
+        "bar" => %{"items" => %{"type" => "integer"}, "type" => "array"},
+        "foo" => %{"type" => "boolean"}
+      },
+      "required" => ["foo"],
+      "type" => "object",
+      "minProperties" => 1,
+      "maxProperties" => 2
+    }
+  ])
+
+  property_test("object generation with min/maxProperties and patternProperties should work", [
+    %{
+      "patternProperties" => %{
+        "^[0-9]{4}$" => %{"type" => "integer"},
+        "^[a-z]{4}$" => %{"type" => "string"}
+      },
+      "properties" => %{
+        "bar" => %{"items" => %{"type" => "integer"}, "type" => "array"},
+        "foo" => %{"type" => "boolean"}
+      },
+      "required" => ["foo"],
+      "type" => "object",
+      "minProperties" => 3
+    },
+    %{
+      "patternProperties" => %{
+        "^[0-9]{4}$" => %{"type" => "integer"},
+        "^[a-z]{4}$" => %{"type" => "string"}
+      },
+      "properties" => %{
+        "bar" => %{"items" => %{"type" => "integer"}, "type" => "array"},
+        "foo" => %{"type" => "boolean"}
+      },
+      "required" => ["foo"],
+      "type" => "object",
+      "maxProperties" => 1
+    },
+    %{
+      "patternProperties" => %{
+        "^[0-9]{4}$" => %{"type" => "integer"},
+        "^[a-z]{4}$" => %{"type" => "string"}
+      },
+      "properties" => %{
+        "bar" => %{"items" => %{"type" => "integer"}, "type" => "array"},
+        "foo" => %{"type" => "boolean"}
+      },
+      "required" => ["foo"],
+      "type" => "object",
+      "minProperties" => 2,
+      "maxProperties" => 4
+    }
+  ])
+
+  property "invalid schema should return nil" do
     schema = nil
 
     check all(data <- JsonDataFaker.generate(schema)) do
