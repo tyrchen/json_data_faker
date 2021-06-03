@@ -1,6 +1,9 @@
 defmodule JsonDataFaker.Generator.Object do
   @moduledoc false
 
+  # see https://github.com/whatyouhide/stream_data/pull/133
+  @dialyzer {:no_opaque, [pattern_properties_generator: 5]}
+
   def generate(%{"type" => "object"} = schema, root, opts) do
     required = Map.get(schema, "required", [])
 
