@@ -28,6 +28,13 @@ defmodule JsonDataFaker.Generator.String do
     end)
   end
 
+  def generate(%{"format" => format}, root, opts) do
+    case Application.fetch_env(:json_data_faker, :custom_format_generator) do
+      :error -> string(:ascii, [])
+      {:ok, {mod, fun}} -> apply(mod, fun, [format, root, opts])
+    end
+  end
+
   def generate(%{"pattern" => regex}, _root, _opts),
     do: Randex.stream(Regex.compile!(regex), mod: Randex.Generator.StreamData, max_repetition: 10)
 

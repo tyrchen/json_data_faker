@@ -14,6 +14,18 @@ defmodule JsonDataFakerTest.Helpers do
   end
 end
 
+defmodule JsonDataFakerTest.CustomFormat do
+  def generate("foo", _root, _opts) do
+    StreamData.string([?a..?f])
+  end
+
+  def validate("foo", data) do
+    Regex.match?(~r/^[a-f]*$/, data)
+  end
+
+  def validate(_, _data), do: true
+end
+
 defmodule JsonDataFakerTest do
   use ExUnit.Case
   use ExUnitProperties
@@ -104,6 +116,11 @@ defmodule JsonDataFakerTest do
     "type" => "string",
     "minLength" => 200,
     "maxLength" => 201
+  })
+
+  property_test("string generation with custom format should work", %{
+    "type" => "string",
+    "format" => "foo"
   })
 
   property_test("integer generation should work", %{
