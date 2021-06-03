@@ -34,7 +34,13 @@ defmodule JsonDataFaker.Generator.Misc do
     all_of_merger_root = fn root -> &all_of_merger(&1, &2, &3, root) end
 
     Enum.reduce(all_ofs, %{}, fn all_of, acc ->
-      Map.merge(acc, Utils.schema_resolve(all_of, root), all_of_merger_root.(root))
+      all_of =
+        case Utils.schema_resolve(all_of, root) do
+          %{"allOf" => all_ofs} -> merge_all_of(all_ofs, root)
+          all_of -> all_of
+        end
+
+      Map.merge(acc, all_of, all_of_merger_root.(root))
     end)
   end
 
