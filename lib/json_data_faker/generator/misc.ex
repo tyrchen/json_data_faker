@@ -21,6 +21,14 @@ defmodule JsonDataFaker.Generator.Misc do
     |> JsonDataFaker.generate_by_type(root, opts)
   end
 
+  def generate(%{"not" => not_schema} = schema, root, opts) do
+    schema
+    |> Map.delete("not")
+    |> JsonDataFaker.generate_by_type(root, opts)
+    |> StreamData.scale(&(&1 * 3))
+    |> StreamData.filter(&(not ExJsonSchema.Validator.valid?(not_schema, &1)))
+  end
+
   def generate(%{"enum" => choices}, _root, _opts), do: StreamData.member_of(choices)
 
   def generate(%{"type" => [_ | _] = types} = schema, root, opts) do

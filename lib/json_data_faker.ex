@@ -27,6 +27,8 @@ defmodule JsonDataFaker do
     "patternProperties"
   ]
 
+  @misc_keys ["$ref", "oneOf", "anyOf", "allOf", "not", "enum"]
+
   @doc """
   generate fake data with given schema. It could be a raw json schema or ExJsonSchema.Schema.Root type.
 
@@ -65,18 +67,10 @@ defmodule JsonDataFaker do
 
   @doc false
 
-  def generate_by_type(%{"$ref" => _} = schema, root, opts), do: Misc.generate(schema, root, opts)
-
-  def generate_by_type(%{"oneOf" => _} = schema, root, opts),
-    do: Misc.generate(schema, root, opts)
-
-  def generate_by_type(%{"anyOf" => _} = schema, root, opts),
-    do: Misc.generate(schema, root, opts)
-
-  def generate_by_type(%{"allOf" => _} = schema, root, opts),
-    do: Misc.generate(schema, root, opts)
-
-  def generate_by_type(%{"enum" => _} = schema, root, opts), do: Misc.generate(schema, root, opts)
+  for key <- @misc_keys do
+    def generate_by_type(schema, root, opts) when is_map_key(schema, unquote(key)),
+      do: Misc.generate(schema, root, opts)
+  end
 
   def generate_by_type(%{"type" => [_ | _]} = schema, root, opts),
     do: Misc.generate(schema, root, opts)

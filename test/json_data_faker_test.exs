@@ -707,6 +707,13 @@ defmodule JsonDataFakerTest do
     }
   ])
 
+  property_test("generation from schema with 'not' key should work", %{
+    "type" => "integer",
+    "minimum" => 0,
+    "multipleOf" => 2,
+    "not" => %{"multipleOf" => 3}
+  })
+
   property "invalid schema should return nil" do
     schema = nil
 
