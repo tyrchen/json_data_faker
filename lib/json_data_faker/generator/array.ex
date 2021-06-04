@@ -57,8 +57,9 @@ defmodule JsonDataFaker.Generator.Array do
     end)
   end
 
-  def generate(%{"items" => inner_schema} = schema, root, _opts)
-      when is_map(inner_schema) do
+  def generate(schema, root, _opts) do
+    inner_schema = Map.get(schema, "items", %{})
+
     opts =
       Enum.reduce(schema, [], fn
         {"minItems", min}, acc -> Keyword.put(acc, :min_length, min)
@@ -91,8 +92,6 @@ defmodule JsonDataFaker.Generator.Array do
         |> StreamData.uniq_list_of(opts)
     end
   end
-
-  def generate(_schema, _root, _opts), do: StreamData.constant([])
 
   defp generate_additional_schema(_additional_generator, _items, _min, 0, _root, _opts),
     do: StreamData.constant([])

@@ -15,6 +15,18 @@ defmodule JsonDataFaker do
     defp unshrink(stream), do: StreamData.unshrinkable(stream)
   end
 
+  @string_keys ["pattern", "minLength", "maxLength"]
+  @number_keys ["multipleOf", "maximum", "exclusiveMaximum", "minimum", "exclusiveMinimum"]
+  @array_keys ["additionalItems", "items", "maxItems", "minItems", "uniqueItems"]
+  @object_keys [
+    "maxProperties",
+    "minProperties",
+    "required",
+    "additionalProperties",
+    "properties",
+    "patternProperties"
+  ]
+
   @doc """
   generate fake data with given schema. It could be a raw json schema or ExJsonSchema.Schema.Root type.
 
@@ -84,6 +96,26 @@ defmodule JsonDataFaker do
     do: Number.generate(schema, root, opts)
 
   def generate_by_type(%{"type" => "null"}, _root, _opts), do: StreamData.constant(nil)
+
+  for key <- @string_keys do
+    def generate_by_type(schema, root, opts) when is_map_key(schema, unquote(key)),
+      do: schema |> Map.put("type", "string") |> String.generate(root, opts)
+  end
+
+  for key <- @number_keys do
+    def generate_by_type(schema, root, opts) when is_map_key(schema, unquote(key)),
+      do: schema |> Map.put("type", "number") |> Number.generate(root, opts)
+  end
+
+  for key <- @array_keys do
+    def generate_by_type(schema, root, opts) when is_map_key(schema, unquote(key)),
+      do: schema |> Map.put("type", "array") |> Array.generate(root, opts)
+  end
+
+  for key <- @object_keys do
+    def generate_by_type(schema, root, opts) when is_map_key(schema, unquote(key)),
+      do: schema |> Map.put("type", "object") |> Object.generate(root, opts)
+  end
 
   def generate_by_type(_schema, _root, _opts), do: JsonDataFaker.Utils.json()
 end

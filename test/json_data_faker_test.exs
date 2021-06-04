@@ -78,6 +78,41 @@ defmodule JsonDataFakerTest do
 
   @full_object Map.put(@complex_object, "components", @components)
 
+  @schema_keys [
+    {"pattern", "[0-9]+"},
+    {"minLength", 2},
+    {"maxLength", 5},
+    {"multipleOf", 3},
+    {"maximum", 10},
+    {"exclusiveMaximum", true, %{"maximum" => 3}},
+    {"minimum", 5},
+    {"exclusiveMinimum", false, %{"minimum" => 1}},
+    {"additionalItems", true},
+    {"items", %{"type" => "integer"}},
+    {"maxItems", 7},
+    {"minItems", 4},
+    {"uniqueItems", true},
+    {"maxProperties", 2},
+    {"minProperties", 5},
+    {"required", ["foo"], %{"properties" => %{"foo" => %{"type" => "string"}}}},
+    {"additionalProperties", false},
+    {"properties", %{"foo" => %{"type" => "string"}}},
+    {"patternProperties", %{"[0-9]+" => %{"type" => "boolean"}}}
+  ]
+
+  for tuple <- @schema_keys do
+    {key, map} =
+      case tuple do
+        {key, value, extra} -> {key, Map.merge(%{key => value}, extra)}
+        {key, value} -> {key, %{key => value}}
+      end
+
+    property_test(
+      "generation from schema with single key #{key} should work",
+      unquote(Macro.escape(map))
+    )
+  end
+
   property "string uuid generation should work" do
     schema = %{"type" => "string", "format" => "uuid"}
 
