@@ -363,6 +363,15 @@ defmodule JsonDataFakerTest do
     "uniqueItems" => true
   })
 
+  property_test("generation of arrays with small enum of unique items should work", %{
+    "type" => "array",
+    "uniqueItems" => true,
+    "items" => %{
+      "type" => "string",
+      "enum" => ["a", "b"]
+    }
+  })
+
   property_test("empty objects and arrays generation should work", [
     %{"type" => "object"},
     %{"type" => "array"}

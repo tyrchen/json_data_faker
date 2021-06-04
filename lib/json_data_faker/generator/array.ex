@@ -40,6 +40,23 @@ defmodule JsonDataFaker.Generator.Array do
     )
   end
 
+  def generate(%{"items" => %{"$ref" => _} = inner_schema} = schema, root, opts) do
+    schema
+    |> Map.put("items", Utils.schema_resolve(inner_schema, root))
+    |> generate(root, opts)
+  end
+
+  def generate(%{"items" => %{"enum" => enum}, "uniqueItems" => true} = schema, _root, _opts)
+      when length(enum) < 12 do
+    Utils.stream_gen(fn ->
+      len = length(enum)
+
+      (schema["minItems"] || 1)..min(schema["maxItems"] || 5, len)
+      |> Enum.flat_map(&Combination.combine(enum, &1))
+      |> Enum.random()
+    end)
+  end
+
   def generate(%{"items" => inner_schema} = schema, root, _opts)
       when is_map(inner_schema) do
     opts =
@@ -50,25 +67,10 @@ defmodule JsonDataFaker.Generator.Array do
       end)
 
     opts =
-      inner_schema
-      |> Utils.schema_resolve(root)
-      |> case do
-        %{"enum" => enum} ->
-          Keyword.put(
-            opts,
-            :max_length,
-            min(Keyword.get(opts, :max_length, length(enum)), length(enum))
-          )
-
-        %{"type" => "boolean"} ->
-          Keyword.put(
-            opts,
-            :max_length,
-            min(Keyword.get(opts, :max_length, 2), 2)
-          )
-
-        _ ->
-          opts
+      case {Keyword.get(opts, :min_length), Keyword.get(opts, :max_length)} do
+        {nil, nil} -> Keyword.put(opts, :max_length, 5)
+        {minlen, nil} -> Keyword.put(opts, :max_length, minlen + 2)
+        _ -> opts
       end
 
     case Map.get(schema, "uniqueItems", false) do

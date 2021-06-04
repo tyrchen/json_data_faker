@@ -22,4 +22,6 @@ defmodule JsonDataFaker.Utils do
 
   def schema_resolve(%{"$ref" => ref}, root), do: ExJsonSchema.Schema.get_fragment!(root, ref)
   def schema_resolve(schema, _root), do: schema
+
+  def stream_gen(fun), do: StreamData.map(StreamData.constant(nil), fn _ -> fun.() end)
 end

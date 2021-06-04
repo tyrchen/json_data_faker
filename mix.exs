@@ -40,6 +40,7 @@ defmodule JsonDataFaker.MixProject do
       {:faker, "~> 0.16"},
       {:uuid, "~> 1.1"},
       {:stream_data, "~> 0.5"},
+      {:combination, ">= 0.0.0"},
 
       # dev/test deps
       {:ex_doc, "~> 0.23", only: :dev, runtime: false},
