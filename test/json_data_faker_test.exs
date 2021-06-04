@@ -5,7 +5,7 @@ defmodule JsonDataFakerTest.Helpers do
         Enum.each(List.wrap(unquote(schemas)), fn schema ->
           resolved_schema = ExJsonSchema.Schema.resolve(schema)
 
-          check all(data <- JsonDataFaker.generate(schema, unquote(opts))) do
+          check all(data <- JsonDataFaker.generate!(schema, unquote(opts))) do
             assert ExJsonSchema.Validator.valid?(resolved_schema, data)
           end
         end)
@@ -116,7 +116,7 @@ defmodule JsonDataFakerTest do
   property "string uuid generation should work" do
     schema = %{"type" => "string", "format" => "uuid"}
 
-    check all(data <- JsonDataFaker.generate(schema)) do
+    check all(data <- JsonDataFaker.generate!(schema)) do
       assert {:ok, _} = UUID.info(data)
     end
   end
@@ -714,17 +714,29 @@ defmodule JsonDataFakerTest do
     "not" => %{"multipleOf" => 3}
   })
 
-  property "invalid schema should return nil" do
-    schema = nil
+  test "invalid schema should return error or raise" do
+    assert {:error, _} = JsonDataFaker.generate(nil)
+    assert {:error, _} = JsonDataFaker.generate([])
+    assert {:error, _} = JsonDataFaker.generate(%{"minimum" => "foo"})
 
-    check all(data <- JsonDataFaker.generate(schema)) do
-      assert is_nil(data)
+    assert_raise JsonDataFaker.InvalidSchemaError, fn ->
+      JsonDataFaker.generate!(%{"minimum" => 5, "maximum" => 1})
     end
 
-    schema = []
+    assert_raise JsonDataFaker.InvalidSchemaError, fn ->
+      JsonDataFaker.generate!(%{"required" => ["a", "b"], "maxProperties" => 1})
+    end
 
-    check all(data <- JsonDataFaker.generate(schema)) do
-      assert is_nil(data)
+    assert_raise JsonDataFaker.InvalidSchemaError, fn ->
+      JsonDataFaker.generate!(%{"additionalProperties" => false, "minProperties" => 3})
+    end
+
+    assert_raise JsonDataFaker.InvalidSchemaError, fn ->
+      JsonDataFaker.generate!(%{
+        "additionalItems" => false,
+        "items" => [%{"type" => "integer"}],
+        "minItems" => 2
+      })
     end
   end
 end

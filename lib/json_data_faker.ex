@@ -9,6 +9,14 @@ defmodule JsonDataFaker do
 
   alias JsonDataFaker.Generator.{Array, Misc, Number, Object, String}
 
+  defmodule InvalidSchemaError do
+    defexception [:message]
+  end
+
+  defmodule GenerationError do
+    defexception [:message]
+  end
+
   if Mix.env() == :test do
     defp unshrink(stream), do: stream
   else
@@ -42,28 +50,53 @@ defmodule JsonDataFaker do
       ...>  "required" => ["title"],
       ...>  "type" => "object"
       ...>}
-      iex> %{"title" => _title} = JsonDataFaker.generate(schema) |> Enum.take(1) |> List.first()
+      iex> %{"title" => _title} = JsonDataFaker.generate!(schema) |> Enum.take(1) |> List.first()
   """
-  def generate(schema, opts \\ [])
+  def generate!(schema, opts \\ [])
 
-  def generate(%Schema.Root{} = schema, opts) do
-    schema.schema
-    |> generate_by_type(schema, opts)
-    |> unshrink()
-  end
+  def generate!(schema, opts) when is_map(schema) do
+    {root, schema} =
+      case schema do
+        %Schema.Root{} ->
+          {schema, schema.schema}
 
-  def generate(schema, opts) when is_map(schema) do
+        _ ->
+          root = Schema.resolve(schema)
+          {root, root.schema}
+      end
+
     schema
-    |> Schema.resolve()
-    |> generate(opts)
+    |> generate_by_type(root, opts)
     |> unshrink()
   rescue
+    e in JsonDataFaker.InvalidSchemaError ->
+      reraise e, __STACKTRACE__
+
     e ->
-      Logger.error("Failed to generate data. #{inspect(e)}")
-      StreamData.constant(nil)
+      %struct{} = e
+
+      case Module.split(struct) do
+        ["ExJsonSchema" | _] ->
+          reraise JsonDataFaker.InvalidSchemaError, [message: e.message], __STACKTRACE__
+
+        ["StreamData" | _] ->
+          reraise JsonDataFaker.GenerationError, [message: e.message], __STACKTRACE__
+
+        _ ->
+          reraise e, __STACKTRACE__
+      end
   end
 
-  def generate(_schema, _opts), do: StreamData.constant(nil)
+  def generate!(schema, _opts) do
+    msg = "invalid schema, it should be a map or a resolved ExJsonSchema, got #{inspect(schema)}"
+    raise JsonDataFaker.InvalidSchemaError, message: msg
+  end
+
+  def generate(schema, opts \\ []) do
+    {:ok, generate!(schema, opts)}
+  rescue
+    e -> {:error, e.message}
+  end
 
   @doc false
 

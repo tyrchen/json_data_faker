@@ -71,7 +71,8 @@ defmodule JsonDataFaker.Generator.Number do
     max = max + if(emax, do: -1, else: 0)
 
     if min > max do
-      StreamData.constant(nil)
+      msg = "number/integer 'minimum' greater than corresponding 'maximum'"
+      raise JsonDataFaker.InvalidSchemaError, message: msg
     else
       integer(min..max)
     end
@@ -84,7 +85,8 @@ defmodule JsonDataFaker.Generator.Number do
     max = Integer.floor_div(max, multipleOf)
 
     if min > max do
-      StreamData.constant(nil)
+      msg = "number/integer 'minimum' greater than corresponding 'maximum'"
+      raise JsonDataFaker.InvalidSchemaError, message: msg
     else
       map(integer(min..max), &(&1 * multipleOf))
     end

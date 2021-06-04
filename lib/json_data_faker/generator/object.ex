@@ -5,8 +5,10 @@ defmodule JsonDataFaker.Generator.Object do
   @dialyzer {:no_opaque, [pattern_properties_generator: 6]}
 
   def generate(%{"required" => [_ | _] = req, "maxProperties" => max_prop}, _root, _opts)
-      when max_prop < length(req),
-      do: StreamData.constant(nil)
+      when max_prop < length(req) do
+    msg = "object 'maxProperties' lower than number of required properties"
+    raise JsonDataFaker.InvalidSchemaError, message: msg
+  end
 
   def generate(
         %{"additionalProperties" => false, "minProperties" => min_prop} = schema,
@@ -15,8 +17,13 @@ defmodule JsonDataFaker.Generator.Object do
       )
       when not is_map_key(schema, "patternProperties") and
              (not is_map_key(schema, "properties") or
-                map_size(:erlang.map_get("properties", schema)) < min_prop),
-      do: StreamData.constant(nil)
+                map_size(:erlang.map_get("properties", schema)) < min_prop) do
+    msg =
+      "object 'minProperties' lower than number of possible properties" <>
+        "without 'patternProperties' and with 'additionalProperties' false"
+
+    raise JsonDataFaker.InvalidSchemaError, message: msg
+  end
 
   def generate(%{"type" => "object"} = schema, root, opts) do
     required = Map.get(schema, "required", [])

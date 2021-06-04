@@ -8,8 +8,10 @@ defmodule JsonDataFaker.Generator.Array do
         _root,
         _opts
       )
-      when length(items) < min,
-      do: StreamData.constant(nil)
+      when length(items) < min do
+    msg = "array minItems greater than number of items choiches with 'additionalItems' false"
+    raise JsonDataFaker.InvalidSchemaError, message: msg
+  end
 
   def generate(%{"additionalItems" => false, "items" => [_ | _] = items} = schema, root, opts) do
     len = length(items)
