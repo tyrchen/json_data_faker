@@ -1,9 +1,6 @@
 defmodule JsonDataFaker.Generator.Object do
   @moduledoc false
 
-  # see https://github.com/whatyouhide/stream_data/pull/133
-  @dialyzer {:no_opaque, [pattern_properties_generator: 6]}
-
   def generate(%{"required" => [_ | _] = req, "maxProperties" => max_prop}, _root, _opts)
       when max_prop < length(req) do
     msg = "object 'maxProperties' lower than number of required properties"
