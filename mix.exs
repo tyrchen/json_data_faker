@@ -37,7 +37,7 @@ defmodule JsonDataFaker.MixProject do
     [
       {:ex_json_schema, "~> 0.7"},
       {:randex, "~> 0.4.0"},
-      {:faker, "~> 0.16"},
+      {:faker, "~> 0.15.0"},
       {:uuid, "~> 1.1"},
       {:stream_data, "~> 0.5"},
       {:combination, ">= 0.0.0"},

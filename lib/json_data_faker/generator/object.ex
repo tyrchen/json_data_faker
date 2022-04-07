@@ -93,9 +93,6 @@ defmodule JsonDataFaker.Generator.Object do
     |> add_additonal_properties(schema_info, root, opts)
   end
 
-  defp add_pattern_properties(generator, %{min_extra_props: mep}, _, _) when mep <= 0,
-    do: generator
-
   defp add_pattern_properties(generator, %{pattern_props: []}, _, _), do: generator
 
   defp add_pattern_properties(generator, schema_info, root, opts) do
@@ -115,7 +112,7 @@ defmodule JsonDataFaker.Generator.Object do
       max_length =
         if(is_nil(schema_info.max_prop) or schema_info.max_prop > ms + 2,
           do: min_length + 2,
-          else: schema_info.max_prop
+          else: max(schema_info.max_prop - ms, 0)
         )
 
       schema_info.pattern_props
@@ -142,11 +139,11 @@ defmodule JsonDataFaker.Generator.Object do
     StreamData.tuple({key_generator, value_generator})
   end
 
-  defp add_additonal_properties(generator, %{min_extra_props: mep}, _, _)
-       when mep <= 0,
-       do: generator
-
   defp add_additonal_properties(generator, %{additional_props: false}, _, _), do: generator
+
+  defp add_additonal_properties(generator, %{additional_props: ap, min_extra_props: mep}, _, _)
+       when map_size(ap) == 0 and mep <= 0,
+       do: generator
 
   defp add_additonal_properties(generator, schema_info, root, opts) do
     key_allowed? = additional_key_allowed?(schema_info)
