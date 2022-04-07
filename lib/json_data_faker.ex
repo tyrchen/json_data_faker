@@ -4,7 +4,38 @@ defmodule JsonDataFaker do
   """
   import StreamData
   require Logger
+
   alias ExJsonSchema.Schema
+
+  alias JsonDataFaker.Generator.{Array, Misc, Number, Object, String}
+
+  defmodule InvalidSchemaError do
+    defexception [:message]
+  end
+
+  defmodule GenerationError do
+    defexception [:message]
+  end
+
+  if Mix.env() == :test do
+    defp unshrink(stream), do: stream
+  else
+    defp unshrink(stream), do: StreamData.unshrinkable(stream)
+  end
+
+  @string_keys ["pattern", "minLength", "maxLength"]
+  @number_keys ["multipleOf", "maximum", "exclusiveMaximum", "minimum", "exclusiveMinimum"]
+  @array_keys ["additionalItems", "items", "maxItems", "minItems", "uniqueItems"]
+  @object_keys [
+    "maxProperties",
+    "minProperties",
+    "required",
+    "additionalProperties",
+    "properties",
+    "patternProperties"
+  ]
+
+  @misc_keys ["$ref", "oneOf", "anyOf", "allOf", "not", "enum"]
 
   @doc """
   generate fake data with given schema. It could be a raw json schema or ExJsonSchema.Schema.Root type.
@@ -19,98 +50,99 @@ defmodule JsonDataFaker do
       ...>  "required" => ["title"],
       ...>  "type" => "object"
       ...>}
-      iex> %{"title" => _title, "body" => _body} = JsonDataFaker.generate(schema) |> Enum.take(1) |> List.first()
+      iex> %{"title" => _title} = JsonDataFaker.generate!(schema) |> Enum.take(1) |> List.first()
   """
-  def generate(%Schema.Root{} = schema) do
-    generate_by_type(schema.schema)
-  end
+  def generate!(schema, opts \\ [])
 
-  def generate(schema) when is_map(schema) do
-    generate(Schema.resolve(schema))
-  rescue
-    e ->
-      Logger.error("Failed to generate data. #{inspect(e)}")
-      nil
-  end
+  def generate!(schema, opts) when is_map(schema) do
+    {root, schema} =
+      case schema do
+        %Schema.Root{} ->
+          {schema, schema.schema}
 
-  def generate(_schema), do: nil
-
-  # private functions
-  defp generate_by_type(%{"type" => "boolean"}) do
-    boolean()
-  end
-
-  defp generate_by_type(%{"type" => "string"} = schema) do
-    generate_string(schema)
-  end
-
-  defp generate_by_type(%{"type" => "integer"} = schema) do
-    min = schema["minimum"] || 10
-    max = schema["maximum"] || 1000
-    integer(min..max)
-  end
-
-  defp generate_by_type(%{"type" => "array"} = schema) do
-    inner_schema = schema["items"]
-    count = Enum.random(2..5)
-
-    StreamData.list_of(generate_by_type(inner_schema), length: count)
-  end
-
-  defp generate_by_type(%{"type" => "object"} = schema) do
-    stream_gen(fn ->
-      Enum.reduce(schema["properties"], %{}, fn {k, inner_schema}, acc ->
-        v = inner_schema |> generate_by_type() |> Enum.take(1) |> List.first()
-
-        Map.put(acc, k, v)
-      end)
-    end)
-  end
-
-  defp generate_by_type(_schema), do: StreamData.constant(nil)
-
-  defp generate_string(%{"format" => "date-time"}),
-    do: stream_gen(fn -> 30 |> Faker.DateTime.backward() |> DateTime.to_iso8601() end)
-
-  defp generate_string(%{"format" => "uuid"}), do: stream_gen(&Faker.UUID.v4/0)
-  defp generate_string(%{"format" => "email"}), do: stream_gen(&Faker.Internet.email/0)
-
-  defp generate_string(%{"format" => "hostname"}),
-    do: stream_gen(&Faker.Internet.domain_name/0)
-
-  defp generate_string(%{"format" => "ipv4"}), do: stream_gen(&Faker.Internet.ip_v4_address/0)
-  defp generate_string(%{"format" => "ipv6"}), do: stream_gen(&Faker.Internet.ip_v6_address/0)
-  defp generate_string(%{"format" => "uri"}), do: stream_gen(&Faker.Internet.url/0)
-
-  defp generate_string(%{"format" => "image_uri"}) do
-    stream_gen(fn ->
-      w = Enum.random(1..4) * 400
-      h = Enum.random(1..4) * 400
-      "https://source.unsplash.com/random/#{w}x#{h}"
-    end)
-  end
-
-  defp generate_string(%{"enum" => choices}), do: StreamData.member_of(choices)
-
-  defp generate_string(%{"pattern" => regex}),
-    do: Randex.stream(Regex.compile!(regex), mod: Randex.Generator.StreamData)
-
-  defp generate_string(schema) do
-    min = schema["minLength"] || 0
-    max = schema["maxLength"] || 1024
-
-    stream_gen(fn ->
-      s = Faker.Lorem.word()
-
-      case String.length(s) do
-        v when v > max -> String.slice(s, 0, max - 1)
-        v when v < min -> String.slice(Faker.Lorem.sentence(min), 0, min)
-        _ -> s
+        _ ->
+          root = Schema.resolve(schema)
+          {root, root.schema}
       end
-    end)
+
+    schema
+    |> generate_by_type(root, opts)
+    |> unshrink()
+  rescue
+    e in JsonDataFaker.InvalidSchemaError ->
+      reraise e, __STACKTRACE__
+
+    e ->
+      %struct{} = e
+
+      case Module.split(struct) do
+        ["ExJsonSchema" | _] ->
+          reraise JsonDataFaker.InvalidSchemaError, [message: e.message], __STACKTRACE__
+
+        ["StreamData" | _] ->
+          reraise JsonDataFaker.GenerationError, [message: e.message], __STACKTRACE__
+
+        _ ->
+          reraise e, __STACKTRACE__
+      end
   end
 
-  defp stream_gen(fun) do
-    StreamData.map(StreamData.constant(nil), fn _ -> fun.() end)
+  def generate!(schema, _opts) do
+    msg = "invalid schema, it should be a map or a resolved ExJsonSchema, got #{inspect(schema)}"
+    raise JsonDataFaker.InvalidSchemaError, message: msg
   end
+
+  def generate(schema, opts \\ []) do
+    {:ok, generate!(schema, opts)}
+  rescue
+    e -> {:error, e.message}
+  end
+
+  @doc false
+
+  for key <- @misc_keys do
+    def generate_by_type(schema, root, opts) when is_map_key(schema, unquote(key)),
+      do: Misc.generate(schema, root, opts)
+  end
+
+  def generate_by_type(%{"type" => [_ | _]} = schema, root, opts),
+    do: Misc.generate(schema, root, opts)
+
+  def generate_by_type(%{"type" => "boolean"}, _root, _opts), do: boolean()
+
+  def generate_by_type(%{"type" => "string"} = schema, root, opts),
+    do: String.generate(schema, root, opts)
+
+  def generate_by_type(%{"type" => "array"} = schema, root, opts),
+    do: Array.generate(schema, root, opts)
+
+  def generate_by_type(%{"type" => "object"} = schema, root, opts),
+    do: Object.generate(schema, root, opts)
+
+  def generate_by_type(%{"type" => type} = schema, root, opts) when type in ["integer", "number"],
+    do: Number.generate(schema, root, opts)
+
+  def generate_by_type(%{"type" => "null"}, _root, _opts), do: StreamData.constant(nil)
+
+  for key <- @string_keys do
+    def generate_by_type(schema, root, opts) when is_map_key(schema, unquote(key)),
+      do: schema |> Map.put("type", "string") |> String.generate(root, opts)
+  end
+
+  for key <- @number_keys do
+    def generate_by_type(schema, root, opts) when is_map_key(schema, unquote(key)),
+      do: schema |> Map.put("type", "number") |> Number.generate(root, opts)
+  end
+
+  for key <- @array_keys do
+    def generate_by_type(schema, root, opts) when is_map_key(schema, unquote(key)),
+      do: schema |> Map.put("type", "array") |> Array.generate(root, opts)
+  end
+
+  for key <- @object_keys do
+    def generate_by_type(schema, root, opts) when is_map_key(schema, unquote(key)),
+      do: schema |> Map.put("type", "object") |> Object.generate(root, opts)
+  end
+
+  def generate_by_type(_schema, _root, _opts), do: JsonDataFaker.Utils.json()
 end

@@ -37,13 +37,15 @@ defmodule JsonDataFaker.MixProject do
     [
       {:ex_json_schema, "~> 0.7"},
       {:randex, "~> 0.4.0"},
-      {:faker, "~> 0.16"},
+      {:faker, "~> 0.15.0"},
       {:uuid, "~> 1.1"},
       {:stream_data, "~> 0.5"},
+      {:combination, ">= 0.0.0"},
 
       # dev/test deps
       {:ex_doc, "~> 0.23", only: :dev, runtime: false},
-      {:credo, "~> 1.5", only: [:dev, :test]}
+      {:credo, "~> 1.5", only: [:dev, :test]},
+      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false}
     ]
   end
 
